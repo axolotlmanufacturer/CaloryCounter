@@ -4,6 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import de.privat.kalorienzaehler.domain.diary.PerUnit
 
 /** A food entered by the user, with values as printed on the pack (per 100 g or 100 ml). */
 @Entity(

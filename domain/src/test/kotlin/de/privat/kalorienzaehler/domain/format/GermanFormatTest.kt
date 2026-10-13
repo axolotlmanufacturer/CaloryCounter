@@ -65,4 +65,25 @@ class GermanFormatTest {
         assertFailsWith<IllegalArgumentException> { GermanFormat.wholeNumber(Double.NaN) }
         assertFailsWith<IllegalArgumentException> { GermanFormat.upTo(Double.POSITIVE_INFINITY, 1) }
     }
+
+    @Test
+    fun editableTextHasNoThousandsSeparatorSoItParsesBack() {
+        assertEquals("1500", GermanFormat.editable(1500.0, 2))
+        assertEquals("1234,5", GermanFormat.editable(1234.5, 2))
+        assertEquals("5,5", GermanFormat.editable(5.5, 2))
+        assertEquals("5", GermanFormat.editable(5.0, 2))
+        assertEquals("0,25", GermanFormat.editable(0.25, 2))
+        assertEquals("0", GermanFormat.editable(-0.001, 2))
+        assertEquals(1234.5, DecimalInput.parse(GermanFormat.editable(1234.5, 2)))
+    }
+
+    @Test
+    fun weekdaysAreShortGermanNamesWithADot() {
+        // 12 October 2026 is a Monday.
+        val monday = LocalDate.of(2026, 10, 12)
+        assertEquals(
+            listOf("Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa.", "So."),
+            (0L..6L).map { GermanFormat.weekdayShort(monday.plusDays(it)) },
+        )
+    }
 }

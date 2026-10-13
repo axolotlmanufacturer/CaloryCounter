@@ -13,6 +13,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import de.privat.kalorienzaehler.data.userdb.CustomFoodDao
+import de.privat.kalorienzaehler.data.userdb.DiaryDao
 import de.privat.kalorienzaehler.data.userdb.UserDatabase
 import de.privat.kalorienzaehler.data.userdb.WeightDao
 import javax.inject.Singleton
@@ -43,4 +45,10 @@ object DataModule {
 
     @Provides
     fun provideWeightDao(database: UserDatabase): WeightDao = database.weightDao()
+
+    @Provides
+    fun provideDiaryDao(database: UserDatabase): DiaryDao = database.diaryDao()
+
+    @Provides
+    fun provideCustomFoodDao(database: UserDatabase): CustomFoodDao = database.customFoodDao()
 }

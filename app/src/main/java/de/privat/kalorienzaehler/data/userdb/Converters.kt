@@ -1,9 +1,9 @@
 package de.privat.kalorienzaehler.data.userdb
 
 import androidx.room.TypeConverter
-import de.privat.kalorienzaehler.data.userdb.entity.FoodSource
-import de.privat.kalorienzaehler.data.userdb.entity.Meal
-import de.privat.kalorienzaehler.data.userdb.entity.PerUnit
+import de.privat.kalorienzaehler.domain.diary.FoodSource
+import de.privat.kalorienzaehler.domain.diary.Meal
+import de.privat.kalorienzaehler.domain.diary.PerUnit
 import java.time.LocalDate
 
 /** Dates are stored as ISO text (`2026-10-13`): readable, sortable, easy to export. */

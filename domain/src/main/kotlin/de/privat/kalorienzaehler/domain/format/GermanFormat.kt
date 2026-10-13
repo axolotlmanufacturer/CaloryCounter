@@ -21,6 +21,8 @@ object GermanFormat {
 
     val LOCALE: Locale = Locale.GERMANY
 
+    private val WEEKDAYS_SHORT = listOf("Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa.", "So.")
+
     private val DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", LOCALE)
 
     /** Rounds half-up to a whole number and adds thousands separators: `1234.5` → `"1.235"`. */
@@ -50,6 +52,25 @@ object GermanFormat {
         if (rounded.signum() == 0) rounded = rounded.abs()
         return formatter(minFraction = 0, maxFraction = maxFractionDigits).format(rounded)
     }
+
+    /**
+     * Like [upTo] but without thousands separators, for text the user edits and that is parsed back
+     * with [DecimalInput.parse]: `editable(1500.0, 2)` → `"1500"`, `editable(5.5, 2)` → `"5,5"`.
+     */
+    fun editable(value: Double, maxFractionDigits: Int): String {
+        require(maxFractionDigits >= 0) { "maxFractionDigits must be >= 0" }
+        require(value.isFinite()) { "value must be finite" }
+        var rounded = BigDecimal.valueOf(value).setScale(maxFractionDigits, RoundingMode.HALF_UP)
+        if (rounded.signum() == 0) rounded = rounded.abs()
+        return DecimalFormat("0", DecimalFormatSymbols.getInstance(LOCALE)).apply {
+            minimumFractionDigits = 0
+            this.maximumFractionDigits = maxFractionDigits
+            roundingMode = RoundingMode.HALF_UP
+        }.format(rounded)
+    }
+
+    /** Short weekday with a dot, independent of the JDK's locale data: `Mo.`, `Di.`, …, `So.`. */
+    fun weekdayShort(date: LocalDate): String = WEEKDAYS_SHORT[date.dayOfWeek.value - 1]
 
     /** `LocalDate.of(2026, 10, 13)` → `"13.10.2026"`. */
     fun date(date: LocalDate): String = DATE.format(date)

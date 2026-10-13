@@ -10,7 +10,7 @@ import de.privat.kalorienzaehler.data.userdb.entity.WeightEntryEntity
 
 /**
  * The read-write database `user.db` (PROMPT.md §5.3). The full schema exists from version 1; DAOs are
- * added together with the features that use them. Schemas are exported to `app/schemas`; any change
+ * added together with the features that use them (the favorites DAO comes with the food database). Schemas are exported to `app/schemas`; any change
  * needs a version bump and an explicit migration (never a destructive fallback).
  */
 @Database(
@@ -27,6 +27,10 @@ import de.privat.kalorienzaehler.data.userdb.entity.WeightEntryEntity
 abstract class UserDatabase : RoomDatabase() {
 
     abstract fun weightDao(): WeightDao
+
+    abstract fun diaryDao(): DiaryDao
+
+    abstract fun customFoodDao(): CustomFoodDao
 
     companion object {
         const val NAME = "user.db"

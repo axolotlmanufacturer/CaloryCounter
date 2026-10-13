@@ -2,6 +2,7 @@ package de.privat.kalorienzaehler.data.userdb.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import de.privat.kalorienzaehler.domain.diary.FoodSource
 
 @Entity(
     tableName = "favorite",
