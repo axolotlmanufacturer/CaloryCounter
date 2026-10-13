@@ -16,8 +16,6 @@
     <string name="weight_empty_message">Hier siehst du deinen Gewichtsverlauf mit Trendlinie und deinen Weg zum Zielgewicht.</string>
     <string name="stats_empty_title">Noch keine Auswertungen</string>
     <string name="stats_empty_message">Sobald du ein paar Tage erfasst hast, findest du hier deine Wochen- und Monatsübersicht.</string>
-    <string name="profile_empty_title">Dein Profil</string>
-    <string name="profile_empty_message">Hier verwaltest du deine Körperdaten, dein Ziel und die Einstellungen.</string>
 
     <!-- Loading -->
     <string name="loading_description">Wird geladen …</string>
@@ -27,8 +25,6 @@
     <string name="unit_kj_value">%1$s kJ</string>
     <string name="unit_kg_value">%1$s kg</string>
     <string name="unit_g_value">%1$s g</string>
-    <string name="unit_kg_per_week_value">%1$s kg pro Woche</string>
-    <string name="unit_percent_value">%1$s %%</string>
 
     <!-- Common actions -->
     <string name="action_next">Weiter</string>
@@ -52,7 +48,6 @@
     <string name="field_goal_weight">Zielgewicht (kg)</string>
     <string name="field_goal_weight_min_hint">Mindestens %1$s kg (BMI 18,5)</string>
     <string name="field_goal_rate">Tempo</string>
-    <string name="field_goal_type">Dein Ziel</string>
 
     <!-- Activity levels -->
     <string name="activity_title">Wie aktiv bist du?</string>
@@ -151,7 +146,6 @@
     <string name="error_birth_date_future">Das Geburtsdatum liegt in der Zukunft.</string>
     <string name="error_birth_date_too_young">Die App ist ab 10 Jahren nutzbar. Bitte prüfe das Geburtsdatum.</string>
     <string name="error_birth_date_too_old">Bitte prüfe das Geburtsdatum.</string>
-    <string name="error_goal_weight_missing">Bitte gib dein Zielgewicht an.</string>
     <string name="error_goal_weight_below_bmi">Dein Zielgewicht sollte einem BMI von mindestens 18,5 entsprechen, bei deiner Größe also mindestens %1$s kg.</string>
     <string name="error_goal_weight_not_below">Zum Abnehmen muss das Zielgewicht unter deinem aktuellen Gewicht liegen.</string>
     <string name="error_goal_weight_not_above">Zum Zunehmen muss das Zielgewicht über deinem aktuellen Gewicht liegen.</string>

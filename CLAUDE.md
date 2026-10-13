@@ -137,6 +137,28 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
 - `:domain` compiles with `-Xjdk-release=17` so JDK 18+ APIs (e.g. `List.removeFirst`) cannot slip
   in: Android lint never analyzes that module. JDK ≤17 APIs missing on Android 8 (e.g.
   `Stream.toList`) are still possible there; prefer Kotlin stdlib APIs in `:domain`.
+- **Form state (Phase 2):** `ProfileDraft` (in `:domain`) holds the text of every input field and
+  `evaluate(today)` returns errors, the parsed `UserProfile`, the `GoalPlan` and the notices, so
+  onboarding and Profil share one tested path. ViewModels keep the draft in Compose snapshot state
+  (`mutableStateOf` + `derivedStateOf`), not in a `StateFlow`, because a flow round trip makes the
+  cursor jump in text fields. Screens are a stateless `*Content` composable plus a thin wrapper that
+  calls `hiltViewModel()`; tests drive the `*Content` directly.
+- **Safety notices (PROMPT.md §6.4):** `GoalPlanner` never blocks silently: every intervention
+  (goal not offered, rate capped to 1 % of body weight, calorie floor 1.200/1.500, goal weight below
+  BMI 18,5, Katch-McArdle without body fat, macros that do not fit) yields a `GoalNotice`; the German
+  wording lives in `ui/profile/Messages.kt`. Users under 18 get a maintenance estimate plus the
+  `EstimateNotMadeForMinors` caveat; "Abnehmen" and "Zunehmen" are not offered to them.
+  When 1,6 g/kg protein alone exceeds the target, protein is reduced to fit and the user is told
+  (the spec was silent here).
+- **Hilt in tests (Phase 2):** `testing/TestModules.kt` replaces `RepositoryModule` and `ClockModule`
+  via `@TestInstallIn` with the in-memory fakes from `testing/Fakes.kt`; `hilt-android-testing` plus
+  `kspTest(hilt.compiler)` and `HiltTestApplication`. `NavigationTest` and `MainActivityTest` use it.
+- **200 % font scale is tested (PROMPT.md §8):** `ui/FontScaleTest` renders every onboarding step and
+  Profil at `fontScale = 2.0` on 360×640 dp with `@GraphicsMode(NATIVE)` and fails on clipped or
+  off-screen text via `testing/TextOverflow.kt` (`clippedTexts()`). Legacy graphics mode has fake
+  text metrics, and `hasVisualOverflow` fires for every shrink-wrapped text, so neither is usable;
+  the detector uses `didOverflowHeight`, `multiParagraph.didExceedMaxLines` and bounds off screen.
+  `TextOverflowDetectorTest` proves the detector can fail. Use one `setContent` per test.
 - The keystore can't live in the ephemeral cloud container. How to handle it is decided in Phase 8.
 
 ## Gotchas
@@ -197,8 +219,8 @@ present after any `./gradlew --version`):
 
 ## Open items for later phases
 
-- Phase 2: once a tab screen calls `hiltViewModel()`, `NavigationTest`'s plain `createComposeRule()`
-  host cannot provide it. Split screens into a stateless content composable plus a route wrapper,
-  or add the Hilt test setup (`hilt-android-testing`, `kspTest`, `HiltTestApplication`).
 - Phase 7: Material 3's `NavigationBarItem` has a fixed 80 dp height, so tab labels clip at 200 %
-  font scale (PROMPT.md §8); needs a custom bar or `ShortNavigationBar` check.
+  font scale (PROMPT.md §8); needs a custom bar or `ShortNavigationBar` check. `FontScaleTest`
+  currently covers the content screens, not the root navigation bar: extend it.
+- Phase 7: "Alle Daten löschen", "Über die App" and the "Lebensmitteldatenbank wird vorbereitet …"
+  message are not built yet (`foods.db` exists from Phase 4, data deletion is Phase 7).
