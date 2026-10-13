@@ -3,6 +3,7 @@
 #   - Android SDK command-line tools (latest, checksum-verified), platform 37, build-tools,
 #     platform-tools, licenses accepted
 #   - ANDROID_HOME/PATH persisted for later shells, local.properties when run from the repo
+#   - the Robolectric SDK 37 jar, prefetched with retries
 #   - a Gradle init script that prefers repo1.maven.org (repo.maven.apache.org answers 429
 #     through the container's egress proxy)
 #
@@ -14,7 +15,11 @@ set -euo pipefail
 
 ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
 REPO_URL="https://dl.google.com/android/repository"
-SDK_PACKAGES=("platform-tools" "platforms;android-37" "build-tools;36.0.0")
+# Platform ids for new SDKs carry a minor version ("android-37.0"); AGP 9.4 defaults to
+# build-tools 36.0.0 and would otherwise try to download it during the build.
+SDK_PACKAGES=("platform-tools" "platforms;android-37.0" "build-tools;36.0.0")
+# Robolectric downloads this ~240 MB jar on the first test run without retrying; prefetch it.
+ROBOLECTRIC_ANDROID_ALL="17-robolectric-15733970-i7"
 
 log() { printf '[cloud-setup] %s\n' "$*"; }
 
@@ -89,6 +94,19 @@ persist_environment() {
   fi
 }
 
+prefetch_robolectric_sdk() {
+  local version="$ROBOLECTRIC_ANDROID_ALL" dir file
+  dir="$HOME/.m2/repository/org/robolectric/android-all-instrumented/$version"
+  mkdir -p "$dir"
+  for file in "android-all-instrumented-$version.pom" "android-all-instrumented-$version.jar"; do
+    if [[ -s "$dir/$file" ]]; then continue; fi
+    log "prefetching $file"
+    curl -fsS --retry 8 --retry-all-errors --retry-delay 15 -o "$dir/$file.part" \
+      "https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/$version/$file"
+    mv "$dir/$file.part" "$dir/$file"
+  done
+}
+
 install_gradle_init_script() {
   mkdir -p "$HOME/.gradle/init.d"
   # Same content as scripts/gradle/maven-central-repo1.init.gradle.kts (kept inline so the
@@ -123,5 +141,6 @@ KTS
 install_cmdline_tools
 install_sdk_packages
 persist_environment
+prefetch_robolectric_sdk
 install_gradle_init_script
 log "done. ANDROID_HOME=$ANDROID_HOME"

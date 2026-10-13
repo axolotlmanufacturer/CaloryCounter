@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Android 12+ (API 31+). Privacy (PROMPT.md §2.5): nothing goes to cloud backup,
-    but everything may move to a new phone via device-to-device transfer.
+    Android 12+ (API 31+). Privacy (PROMPT.md §2.5): nothing goes to cloud backup
+    (an exclude for every domain; an empty section would mean "everything"), but the
+    user's data may move to a new phone via device-to-device transfer. The read-only
+    food database is shipped with the app and is not transferred.
 -->
 <data-extraction-rules>
     <cloud-backup>
@@ -19,5 +21,7 @@
         <include domain="file" path="." />
         <include domain="database" path="." />
         <include domain="sharedpref" path="." />
+        <exclude domain="database" path="foods.db" />
+        <exclude domain="database" path="foods.db-shm" />
     </device-transfer>
 </data-extraction-rules>

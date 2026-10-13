@@ -100,6 +100,15 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   (no `R.*` in `when` branches); `proguard-rules.pro` must exist; BuildConfig is enabled
   explicitly in `:app`.
 - Compose UI tests use the v2 APIs (`androidx.compose.ui.test.junit4.v2.createComposeRule`).
+  Robolectric 4.17 runs them on SDK 37 with German qualifiers (`app/src/test/resources/robolectric.properties`);
+  SDK 36/37 sandboxes need **JDK 21** for the test JVM, so never configure a toolchain below 21.
+- `hiltViewModel()` comes from `androidx.hilt:hilt-lifecycle-viewmodel-compose` (not the deprecated
+  `hilt-navigation-compose`). The Dagger processor is `com.google.dagger:hilt-compiler` on `ksp`.
+- Backup rules: one `<exclude>` per domain (a `root` rule does not cover files/databases/shared_prefs);
+  never more than two attributes per element in `res/xml/backup_rules.xml` (the API 26/27 parser aborts);
+  `foods.db` is excluded from device transfer.
+- Keep androidx.core's `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`: removing it makes
+  `ContextCompat.registerReceiver(…, RECEIVER_NOT_EXPORTED)` throw on API 26–32. The manifest check allows it.
 - Theme fallback colors (`ui/theme/Color.kt`) are generated from `#2E7D5B` with Material Color
   Utilities (tonal spot, spec 2021) — regenerate, don't hand-edit.
 - Offline by design: `INTERNET` is removed via `tools:node="remove"`. No analytics, Firebase or
@@ -128,6 +137,9 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
 - The cloud container is ephemeral. The Android SDK, venv and raw data must be reinstalled or
   re-downloaded per session. Push work before ending a session.
 - No `/dev/kvm`, so no emulator or Gradle Managed Devices in the cloud container.
+- SDK package ids for new platforms carry a minor version: `platforms;android-37.0` (not `android-37`).
+- Robolectric downloads `android-all-instrumented:17-robolectric-15733970-i7` (~240 MB) from Maven
+  Central on the first test run without retrying; `scripts/cloud-setup.sh` prefetches it into `~/.m2`.
 - The system Gradle in the container (8.14.3) is too old for AGP 9.x. Always use `./gradlew`.
 - `repo.maven.apache.org` answers **429** through the container proxy; `repo1.maven.org` works.
   `scripts/cloud-setup.sh` installs `~/.gradle/init.d/maven-central-repo1.init.gradle.kts`

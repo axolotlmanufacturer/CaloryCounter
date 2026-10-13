@@ -61,6 +61,21 @@ android {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    // Robolectric's android-all jar is large; JDK 17+ needs these opens for its sandbox.
+    maxHeapSize = "2g"
+    jvmArgs(
+        "--add-opens=java.base/java.lang=ALL-UNNAMED",
+        "--add-opens=java.base/java.util=ALL-UNNAMED",
+        "--add-opens=java.base/java.io=ALL-UNNAMED",
+        "--add-opens=java.base/java.net=ALL-UNNAMED",
+        "--add-opens=java.base/java.security=ALL-UNNAMED",
+        "--add-opens=java.base/java.text=ALL-UNNAMED",
+        "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
+        "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
+    )
+}
+
 dependencies {
     implementation(project(":domain"))
 

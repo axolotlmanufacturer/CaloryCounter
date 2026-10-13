@@ -2,6 +2,9 @@
 <!--
     Android 8.0–8.1 (API 26–27). These versions cannot tell cloud backup from
     device-to-device transfer, so privacy wins: nothing is backed up at all.
+    One exclude per domain is required (a "root" exclude does not cover files/,
+    databases/ or shared_prefs/). Do not add a third attribute here: the API 26/27
+    parser aborts the whole backup on elements with more than two attributes.
     API 28–30 use res/xml-v28/backup_rules.xml; API 31+ use data_extraction_rules.xml.
 -->
 <full-backup-content>
@@ -10,4 +13,8 @@
     <exclude domain="database" path="." />
     <exclude domain="sharedpref" path="." />
     <exclude domain="external" path="." />
+    <exclude domain="device_root" path="." />
+    <exclude domain="device_file" path="." />
+    <exclude domain="device_database" path="." />
+    <exclude domain="device_sharedpref" path="." />
 </full-backup-content>
