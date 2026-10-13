@@ -27,6 +27,9 @@ Thumbs.db
 keystore.properties
 *.jks
 *.keystore
+# Shared debug key (public, well-known passwords) so debug APKs from different machines and
+# cloud sessions install over each other. Never use it for release builds.
+!app/debug.keystore
 
 # --- Food database pipeline ---
 tools/food-db-builder/data/raw/

@@ -24,6 +24,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // Committed debug key (standard "android" passwords, not a secret): debug APKs built in
+            // different cloud sessions keep the same signature and install over each other.
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         debug {
             // x86_64 only for the emulator.
