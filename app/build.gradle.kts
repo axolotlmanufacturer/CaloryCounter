@@ -62,6 +62,8 @@ android {
 }
 
 tasks.withType<Test>().configureEach {
+    // Robolectric's SDK 37 sandbox requires a Java 21 runtime (bytecode stays Java 17).
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
     // Robolectric's android-all jar is large; JDK 17+ needs these opens for its sandbox.
     maxHeapSize = "2g"
     jvmArgs(

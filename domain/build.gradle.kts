@@ -13,6 +13,10 @@ java {
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
+        // Compile against the JDK 17 class library, not the JDK running Gradle: newer JDK APIs
+        // (e.g. List.removeFirst) would pass JVM tests but crash on Android, and Android lint
+        // never analyzes this module.
+        freeCompilerArgs.add("-Xjdk-release=17")
     }
 }
 

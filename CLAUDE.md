@@ -46,7 +46,8 @@ uv venv && uv pip install -r requirements.txt
 bash scripts/cloud-setup.sh
 
 # Verify there is no INTERNET permission in an APK
-$ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/release/app-release.apk
+# (app-release-unsigned.apk until the Phase 8 signingConfig exists)
+$ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
 ## Architecture
@@ -123,17 +124,23 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   for German names. The CSV has no `product_name_de` column. Approved by the user.
 - **BLS 4.0** (free, CC BY 4.0, no registration): `BLS_4_0_Daten_2025_DE.xlsx` +
   `BLS_4_0_Components_DE_EN.xlsx` from blsdb.de/download.
-- No emulator in the cloud container. Instrumented tests are committed and run on the user's
-  device. The same checks also run as Robolectric tests inside `./gradlew test`.
+- No emulator in the cloud container. Instrumented tests (from Phase 4) are committed and run on
+  the user's device. The same checks also run as Robolectric tests inside `./gradlew test`.
+- Test JVMs are pinned to Java 21 (`javaLauncher` in `app/build.gradle.kts`) because Robolectric's
+  SDK 37 sandbox needs it; bytecode stays Java 17.
+- `:domain` compiles with `-Xjdk-release=17` so JDK 18+ APIs (e.g. `List.removeFirst`) cannot slip
+  in: Android lint never analyzes that module. JDK ≤17 APIs missing on Android 8 (e.g.
+  `Stream.toList`) are still possible there; prefer Kotlin stdlib APIs in `:domain`.
 - The keystore can't live in the ephemeral cloud container. How to handle it is decided in Phase 8.
 
 ## Gotchas
 
 - **Cloud environment network policy:** these hosts must be in the environment's Allowed
   domains: `dl.google.com` (Android SDK **and** Google Maven, since `maven.google.com`
-  redirects there), `downloads.gradle.org` (Gradle wrapper, since `services.gradle.org`
-  redirects there) and `blsdb.de` (BLS). Maven Central, the Gradle Plugin Portal, PyPI and the
-  OFF S3 bucket (`openfoodfacts-ds.s3.eu-west-3.amazonaws.com`) are reachable.
+  redirects there) and `blsdb.de` (BLS). Reachable already: the Gradle distribution
+  (`services.gradle.org` redirects the zip to GitHub releases), Maven Central and Google's
+  Maven Central mirror, the Gradle Plugin Portal, PyPI, raw.githubusercontent.com and the OFF
+  S3 bucket (`openfoodfacts-ds.s3.eu-west-3.amazonaws.com`).
 - The cloud container is ephemeral. The Android SDK, venv and raw data must be reinstalled or
   re-downloaded per session. Push work before ending a session.
 - No `/dev/kvm`, so no emulator or Gradle Managed Devices in the cloud container.
@@ -141,20 +148,39 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
 - Robolectric downloads `android-all-instrumented:17-robolectric-15733970-i7` (~240 MB) from Maven
   Central on the first test run without retrying; `scripts/cloud-setup.sh` prefetches it into `~/.m2`.
 - The system Gradle in the container (8.14.3) is too old for AGP 9.x. Always use `./gradlew`.
-- `repo.maven.apache.org` answers **429** through the container proxy; `repo1.maven.org` works.
-  `scripts/cloud-setup.sh` installs `~/.gradle/init.d/maven-central-repo1.init.gradle.kts`
-  (copy in `scripts/gradle/`) so Gradle prefers repo1. Not needed on a normal machine.
-- The committed `gradle-wrapper.jar` is the official 8.14.x wrapper jar (generated offline);
-  it downloads the pinned 9.7.1 distribution (SHA-256 checked). Once `downloads.gradle.org` is
-  reachable, refresh it with `./gradlew wrapper --gradle-version 9.7.1
-  --gradle-distribution-sha256-sum acd53f1edaf02f1a8ff99879f8a34b302661a057d9b063ae9e35b552f804d20a`.
+- Both `repo.maven.apache.org` and `repo1.maven.org` often answer **429** through the container
+  proxy; Google's official Maven Central mirror (`maven-central.storage-download.googleapis.com`)
+  does not. `scripts/cloud-setup.sh` installs `~/.gradle/init.d/maven-central-mirror.init.gradle.kts`
+  (copy in `scripts/gradle/`) so Gradle tries the mirror first; `mavenCentral()` stays the
+  fallback. Not needed on a normal machine.
+- The wrapper jar is Gradle 9.7.1's official jar (SHA-256 `7a9ce74c…`); the distribution is
+  pinned by `distributionSha256Sum`.
 - `:domain` can be tested without the Android SDK: see "Testing `:domain` without the SDK".
 
 ## Testing `:domain` without the SDK
 
-When Google Maven / the Gradle distribution are unreachable, the pure-Kotlin module can still be
-built with the system Gradle from a throwaway settings file outside the repo, e.g.
-`settings.gradle.kts` with `include(":domain"); project(":domain").projectDir = file("<repo>/domain")`
-plus a `gradle/libs.versions.toml` containing only `kotlin`, `junit`, `kotlin-test` and the
-`kotlin-jvm` plugin, then
-`gradle -I <repo>/scripts/gradle/maven-central-repo1.init.gradle.kts :domain:test`.
+When Google Maven is unreachable, the root build cannot configure (AGP is missing), but the
+pure-Kotlin module still builds from a throwaway settings file outside the repo:
+
+```kotlin
+// <scratch>/settings.gradle.kts (plus an empty build.gradle.kts and a copy of gradle.properties)
+dependencyResolutionManagement {
+    versionCatalogs { create("libs") { from(files("<repo>/gradle/libs.versions.toml")) } }
+}
+include(":domain")
+project(":domain").projectDir = file("<repo>/domain")
+```
+
+Run it with the wrapper's Gradle 9.7.1 (`~/.gradle/wrapper/dists/gradle-9.7.1-bin/*/gradle-9.7.1/bin/gradle`,
+present after any `./gradlew --version`):
+`gradle -I <repo>/scripts/gradle/maven-central-mirror.init.gradle.kts :domain:test`.
+
+## Open items for later phases
+
+- Phase 2: once a tab screen calls `hiltViewModel()`, `NavigationTest`'s plain `createComposeRule()`
+  host cannot provide it. Split screens into a stateless content composable plus a route wrapper,
+  or add the Hilt test setup (`hilt-android-testing`, `kspTest`, `HiltTestApplication`).
+- Phase 7: Material 3's `NavigationBarItem` has a fixed 80 dp height, so tab labels clip at 200 %
+  font scale (PROMPT.md §8); needs a custom bar or `ShortNavigationBar` check.
+- Navigation Compose (Nav2) is in maintenance mode (critical fixes only); Navigation 3 is stable.
+  The spec mandates Navigation Compose, so a switch needs the user's decision.

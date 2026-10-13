@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- German is the default (and only) locale. All user-facing text lives here (PROMPT.md §2.3). -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="de">
     <string name="app_name">Kalorienzähler</string>
 
     <!-- Bottom navigation -->

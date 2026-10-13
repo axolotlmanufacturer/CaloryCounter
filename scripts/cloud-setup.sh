@@ -4,10 +4,10 @@
 #     platform-tools, licenses accepted
 #   - ANDROID_HOME/PATH persisted for later shells, local.properties when run from the repo
 #   - the Robolectric SDK 37 jar, prefetched with retries
-#   - a Gradle init script that prefers repo1.maven.org (repo.maven.apache.org answers 429
-#     through the container's egress proxy)
+#   - a Gradle init script that prefers Google's Maven Central mirror (repo.maven.apache.org
+#     and repo1.maven.org often answer 429 through the container's egress proxy)
 #
-# Idempotent. Needs network access to dl.google.com.
+# Idempotent. Needs network access to dl.google.com (Android SDK).
 # Usage:  bash scripts/cloud-setup.sh
 # It can also be pasted into the cloud environment's "Setup script" so that every new
 # session starts with the SDK installed (it does not depend on the repository checkout).
@@ -102,26 +102,27 @@ prefetch_robolectric_sdk() {
     if [[ -s "$dir/$file" ]]; then continue; fi
     log "prefetching $file"
     curl -fsS --retry 8 --retry-all-errors --retry-delay 15 -o "$dir/$file.part" \
-      "https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/$version/$file"
+      "https://maven-central.storage-download.googleapis.com/maven2/org/robolectric/android-all-instrumented/$version/$file"
     mv "$dir/$file.part" "$dir/$file"
   done
 }
 
 install_gradle_init_script() {
   mkdir -p "$HOME/.gradle/init.d"
-  # Same content as scripts/gradle/maven-central-repo1.init.gradle.kts (kept inline so the
+  rm -f "$HOME/.gradle/init.d/maven-central-repo1.init.gradle.kts"
+  # Same content as scripts/gradle/maven-central-mirror.init.gradle.kts (kept inline so the
   # script also works when pasted into the environment settings without the repo).
-  cat >"$HOME/.gradle/init.d/maven-central-repo1.init.gradle.kts" <<'KTS'
+  cat >"$HOME/.gradle/init.d/maven-central-mirror.init.gradle.kts" <<'KTS'
 // Cloud-container workaround (installed by scripts/cloud-setup.sh into ~/.gradle/init.d/).
-// Through the container's egress proxy, repo.maven.apache.org often answers 429 Too Many
-// Requests, while repo1.maven.org (the same Maven Central) does not. This adds repo1 in
-// front of the project's repositories; Google's groups are excluded so they go to google().
-// Not needed on a normal developer machine.
-val repo1 = "https://repo1.maven.org/maven2/"
+// Through the container's egress proxy both repo.maven.apache.org and repo1.maven.org often
+// answer 429 Too Many Requests; Google's official Maven Central mirror does not. This adds the
+// mirror in front of the project's repositories (mavenCentral() stays as the fallback); Google's
+// own groups are excluded so they still resolve from google(). Not needed on a normal machine.
+val mavenCentralMirror = "https://maven-central.storage-download.googleapis.com/maven2/"
 
-fun org.gradle.api.artifacts.dsl.RepositoryHandler.addRepo1() {
-    maven(repo1) {
-        name = "MavenCentralRepo1"
+fun org.gradle.api.artifacts.dsl.RepositoryHandler.addMavenCentralMirror() {
+    maven(mavenCentralMirror) {
+        name = "MavenCentralGoogleMirror"
         content {
             excludeGroupByRegex("androidx\\..*")
             excludeGroupByRegex("com\\.android\\..*")
@@ -131,11 +132,11 @@ fun org.gradle.api.artifacts.dsl.RepositoryHandler.addRepo1() {
 }
 
 beforeSettings {
-    pluginManagement.repositories.addRepo1()
-    dependencyResolutionManagement.repositories.addRepo1()
+    pluginManagement.repositories.addMavenCentralMirror()
+    dependencyResolutionManagement.repositories.addMavenCentralMirror()
 }
 KTS
-  log "installed Gradle init script (repo1.maven.org)"
+  log "installed Gradle init script (Google's Maven Central mirror)"
 }
 
 install_cmdline_tools

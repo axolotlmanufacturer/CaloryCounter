@@ -1,5 +1,6 @@
 package de.privat.kalorienzaehler.ui
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -38,6 +39,8 @@ fun KalorienzaehlerRoot(navController: NavHostController = rememberNavController
     val currentDestination = backStackEntry?.destination
 
     Scaffold(
+        // Insets are handled by the bottom bar and by each screen's own top app bar.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             // Full-screen routes added in later phases hide the bottom bar.
             if (currentDestination == null || currentDestination.isTopLevel()) {

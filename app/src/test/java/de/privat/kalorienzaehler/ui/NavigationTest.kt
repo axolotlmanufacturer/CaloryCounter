@@ -5,6 +5,7 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -54,6 +55,12 @@ class NavigationTest {
         tab(R.string.nav_stats).assertIsDisplayed().assertIsNotSelected()
         tab(R.string.nav_profile).assertIsDisplayed().assertIsNotSelected()
         composeRule.onNodeWithText(text(R.string.today_empty_title)).assertIsDisplayed()
+
+        // Spec order (PROMPT.md §7): Heute · Gewicht · Statistik · Profil, left to right.
+        val lefts = listOf(R.string.nav_today, R.string.nav_weight, R.string.nav_stats, R.string.nav_profile)
+            .map { tab(it).getUnclippedBoundsInRoot().left }
+        assertEquals(lefts.sorted(), lefts)
+        assertEquals(4, lefts.distinct().size)
     }
 
     @Test
