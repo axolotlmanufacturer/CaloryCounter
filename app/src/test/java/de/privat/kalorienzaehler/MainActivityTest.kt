@@ -2,11 +2,11 @@ package de.privat.kalorienzaehler
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -50,7 +50,7 @@ class MainActivityTest {
     @Before
     fun inject() = hilt.inject()
 
-    private fun tab(label: Int) = compose.onNode(hasText(string(label)) and hasClickAction())
+    private fun tab(label: Int) = compose.onNode(hasText(string(label)) and isSelectable())
 
     @Test
     fun firstLaunchStartsWithOnboarding() {

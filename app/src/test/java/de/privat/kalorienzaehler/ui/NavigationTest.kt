@@ -5,8 +5,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -52,7 +52,7 @@ class NavigationTest {
         weights.preset(WeightPoint(TEST_TODAY, 80.0))
     }
 
-    private fun tab(@StringRes label: Int) = compose.onNode(hasText(string(label)) and hasClickAction())
+    private fun tab(@StringRes label: Int) = compose.onNode(hasText(string(label)) and isSelectable())
 
     @Test
     fun showsFourGermanTabsInOrderAndStartsOnHeute() {

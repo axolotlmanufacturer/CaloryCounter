@@ -11,7 +11,7 @@
 
     <!-- Empty states -->
     <string name="today_empty_title">Dein Tag ist noch leer</string>
-    <string name="today_empty_message">Hier erscheinen deine Mahlzeiten und wie viele Kalorien heute noch übrig sind.</string>
+    <string name="today_empty_message">Tippe bei einer Mahlzeit auf das Plus, um etwas einzutragen.</string>
     <string name="weight_empty_title">Noch keine Gewichtseinträge</string>
     <string name="weight_empty_message">Hier siehst du deinen Gewichtsverlauf mit Trendlinie und deinen Weg zum Zielgewicht.</string>
     <string name="stats_empty_title">Noch keine Auswertungen</string>
@@ -152,4 +152,150 @@
     <string name="error_katch_needs_body_fat">Für Katch-McArdle brauchst du den Körperfettanteil.</string>
     <string name="error_percents_sum">Die drei Anteile müssen zusammen 100 Prozent ergeben.</string>
     <string name="error_macro_values">Bitte gültige Zahlen eingeben.</string>
+
+    <!-- Common words -->
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_delete">Löschen</string>
+    <string name="action_undo">Rückgängig</string>
+    <string name="unit_kcal">kcal</string>
+    <string name="unit_kj">kJ</string>
+    <string name="unit_ml_value">%1$s ml</string>
+    <string name="value_missing">–</string>
+
+    <!-- Meals -->
+    <string name="meal_breakfast">Frühstück</string>
+    <string name="meal_lunch">Mittagessen</string>
+    <string name="meal_dinner">Abendessen</string>
+    <string name="meal_snacks">Snacks</string>
+
+    <!-- Macros -->
+    <string name="macro_protein">Eiweiß</string>
+    <string name="macro_carbs">Kohlenhydrate</string>
+    <string name="macro_fat">Fett</string>
+
+    <!-- Heute: date switcher -->
+    <string name="date_today">Heute</string>
+    <string name="date_yesterday">Gestern</string>
+    <string name="date_tomorrow">Morgen</string>
+    <string name="date_weekday_value">%1$s, %2$s</string>
+    <string name="today_previous_day">Vorheriger Tag</string>
+    <string name="today_next_day">Nächster Tag</string>
+    <string name="today_pick_date">Datum wählen: %1$s</string>
+    <string name="today_jump_to_today">Zu heute springen</string>
+
+    <!-- Heute: ring and macro bars -->
+    <string name="today_target">Ziel</string>
+    <string name="today_eaten">Gegessen</string>
+    <string name="today_ring_remaining">%1$s übrig</string>
+    <string name="today_ring_over">%1$s über dem Ziel</string>
+    <string name="today_ring_eaten">%1$s gegessen</string>
+    <string name="today_ring_description_remaining">Noch %1$s übrig. Ziel %2$s, gegessen %3$s.</string>
+    <string name="today_ring_description_over">%1$s über dem Ziel. Ziel %2$s, gegessen %3$s.</string>
+    <string name="today_ring_description_no_target">Gegessen: %1$s.</string>
+    <string name="macro_progress_value">%1$s von %2$s</string>
+    <plurals name="today_incomplete_macros">
+        <item quantity="one">Bei einem Eintrag fehlen Angaben zu Eiweiß, Kohlenhydraten oder Fett. Die Summen sind deshalb unvollständig.</item>
+        <item quantity="other">Bei %1$d Einträgen fehlen Angaben zu Eiweiß, Kohlenhydraten oder Fett. Die Summen sind deshalb unvollständig.</item>
+    </plurals>
+
+    <!-- Heute: meals and entries -->
+    <string name="today_add_to_meal">%1$s: Lebensmittel hinzufügen</string>
+    <string name="today_copy_yesterday">Von gestern kopieren (%1$d)</string>
+    <string name="today_copy_previous_day">Vom Vortag kopieren (%1$d)</string>
+    <string name="today_entry_deleted">Eintrag gelöscht</string>
+    <plurals name="today_entries_copied">
+        <item quantity="one">Ein Eintrag kopiert</item>
+        <item quantity="other">%1$d Einträge kopiert</item>
+    </plurals>
+    <string name="entry_quick_default_label">Schnelleintrag</string>
+    <string name="entry_details">%1$s · %2$s</string>
+    <string name="entry_amount_labeled">%1$s × %2$s</string>
+
+    <!-- Lebensmittel hinzufügen -->
+    <string name="add_title">Lebensmittel hinzufügen</string>
+    <string name="add_subtitle">%1$s · %2$s</string>
+    <string name="add_search_label">Lebensmittel suchen</string>
+    <string name="add_search_clear">Suche löschen</string>
+    <string name="add_quick_entry">Schnelleintrag</string>
+    <string name="add_quick_entry_hint">Nur Kalorien eintragen, ohne ein Lebensmittel zu wählen</string>
+    <string name="add_create_custom">Eigenes Lebensmittel anlegen</string>
+    <string name="add_chip_recent">Zuletzt</string>
+    <string name="add_chip_custom">Eigene</string>
+    <string name="add_empty_recent">Hier erscheinen die Lebensmittel, die du zuletzt gegessen hast.</string>
+    <string name="add_empty_custom">Du hast noch keine eigenen Lebensmittel. Lege eines an oder nutze den Schnelleintrag.</string>
+    <string name="add_no_results">Nichts gefunden. Du kannst ein eigenes Lebensmittel anlegen oder den Schnelleintrag nutzen.</string>
+    <string name="food_source_custom">Eigene</string>
+    <string name="food_per_100g">%1$s pro 100 g</string>
+    <string name="food_per_100ml">%1$s pro 100 ml</string>
+    <string name="food_edit_description">%1$s bearbeiten</string>
+
+    <!-- Schnelleintrag -->
+    <string name="quick_title">Schnelleintrag</string>
+    <string name="quick_title_edit">Eintrag bearbeiten</string>
+    <string name="quick_label">Bezeichnung (optional)</string>
+    <string name="quick_label_hint">zum Beispiel Kaffee mit Milch</string>
+    <string name="quick_macros_title">Nährwerte (optional)</string>
+    <string name="quick_macros_hint">Leere Felder bleiben unbekannt und werden nicht mitgezählt.</string>
+    <string name="quick_not_found">Dieser Eintrag existiert nicht mehr.</string>
+
+    <!-- Form fields shared by the diary forms -->
+    <string name="field_energy_kcal">Energie (kcal)</string>
+    <string name="field_protein_g">Eiweiß (g)</string>
+    <string name="field_carbs_g">Kohlenhydrate (g)</string>
+    <string name="field_sugar_g">davon Zucker (g)</string>
+    <string name="field_fat_g">Fett (g)</string>
+    <string name="field_fiber_g">Ballaststoffe (g)</string>
+    <string name="field_salt_g">Salz (g)</string>
+    <string name="field_meal">Mahlzeit</string>
+
+    <!-- Eigenes Lebensmittel -->
+    <string name="custom_title_new">Eigenes Lebensmittel</string>
+    <string name="custom_title_edit">Lebensmittel bearbeiten</string>
+    <string name="custom_name">Name</string>
+    <string name="custom_brand">Marke (optional)</string>
+    <string name="custom_barcode">Barcode (optional)</string>
+    <string name="custom_per_unit">Die Angaben gelten für</string>
+    <string name="custom_per_100g">100 g</string>
+    <string name="custom_per_100ml">100 ml</string>
+    <string name="custom_values_title_g">Nährwerte pro 100 g</string>
+    <string name="custom_values_title_ml">Nährwerte pro 100 ml</string>
+    <string name="custom_values_hint">Trage die Werte so ein, wie sie auf der Verpackung stehen. Nur die Energie ist Pflicht, leere Felder bleiben unbekannt.</string>
+    <string name="custom_serving_title">Portion (optional)</string>
+    <string name="custom_serving_g">Eine Portion wiegt (g)</string>
+    <string name="custom_serving_ml">Eine Portion enthält (ml)</string>
+    <string name="custom_delete">Lebensmittel löschen</string>
+    <string name="custom_delete_title">Lebensmittel löschen?</string>
+    <string name="custom_delete_message">„%1$s“ wird gelöscht. Bereits eingetragene Mahlzeiten bleiben unverändert.</string>
+    <string name="custom_not_found">Dieses Lebensmittel existiert nicht mehr.</string>
+
+    <!-- Hints that never block saving -->
+    <string name="warning_title">Bitte prüfen</string>
+    <string name="warning_kcal_mismatch">Aus Eiweiß, Kohlenhydraten und Fett ergeben sich etwa %1$s kcal, eingetragen sind andere Werte. Das ist nur ein Hinweis: Du kannst trotzdem speichern.</string>
+    <string name="warning_energy_above_max">Mehr als 900 kcal pro 100 g oder 100 ml sind nicht möglich. Hast du vielleicht kJ statt kcal eingetragen?</string>
+    <string name="warning_nutrients_exceed">Die Nährwerte ergeben zusammen mehr als 100 g pro 100 g. Bitte prüfe sie noch einmal anhand der Verpackung.</string>
+    <string name="warning_sugar_exceeds_carbs">„Davon Zucker“ ist größer als die Kohlenhydrate. Bitte prüfe die Werte auf der Verpackung.</string>
+
+    <!-- More input errors -->
+    <string name="error_number_range">Diese Zahl ist zu groß oder zu klein. Bitte prüfe sie.</string>
+    <string name="error_barcode">Ein Barcode hat 8 bis 14 Ziffern.</string>
+    <string name="error_too_long">Der Text ist zu lang.</string>
+
+    <!-- Menge und Portion -->
+    <string name="portion_title">Menge wählen</string>
+    <string name="portion_title_edit">Eintrag bearbeiten</string>
+    <string name="portion_amount">Menge</string>
+    <string name="portion_preview">Für diese Menge</string>
+    <string name="portion_add">Hinzufügen</string>
+    <string name="portion_not_found">Dieser Eintrag existiert nicht mehr.</string>
+    <string name="nutrition_table_g">Nährwerte pro 100 g</string>
+    <string name="nutrition_table_ml">Nährwerte pro 100 ml</string>
+    <string name="nutrition_energy">Energie</string>
+    <string name="nutrition_energy_value">%1$s / %2$s</string>
+    <string name="nutrition_fat">Fett</string>
+    <string name="nutrition_carbs">Kohlenhydrate</string>
+    <string name="nutrition_sugar">davon Zucker</string>
+    <string name="nutrition_fiber">Ballaststoffe</string>
+    <string name="nutrition_protein">Eiweiß</string>
+    <string name="nutrition_salt">Salz</string>
 </resources>

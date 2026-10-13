@@ -16,7 +16,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
+import de.privat.kalorienzaehler.ui.addfood.AddFoodScreen
+import de.privat.kalorienzaehler.ui.addfood.CustomFoodScreen
+import de.privat.kalorienzaehler.ui.addfood.PortionScreen
+import de.privat.kalorienzaehler.ui.addfood.QuickEntryScreen
+import de.privat.kalorienzaehler.ui.navigation.AddFoodRoute
+import de.privat.kalorienzaehler.ui.navigation.CustomFoodRoute
+import de.privat.kalorienzaehler.ui.navigation.LogTarget
+import de.privat.kalorienzaehler.ui.navigation.PortionRoute
+import de.privat.kalorienzaehler.ui.navigation.PortionTarget
 import de.privat.kalorienzaehler.ui.navigation.ProfileRoute
+import de.privat.kalorienzaehler.ui.navigation.QuickEntryRoute
 import de.privat.kalorienzaehler.ui.navigation.StatsRoute
 import de.privat.kalorienzaehler.ui.navigation.TodayRoute
 import de.privat.kalorienzaehler.ui.navigation.TopLevelDestination
@@ -40,7 +50,56 @@ fun KalorienzaehlerRoot() {
     val navigator = remember(navigationState) { Navigator(navigationState) }
 
     val entryProvider = entryProvider {
-        entry<TodayRoute> { TodayScreen() }
+        entry<TodayRoute> {
+            TodayScreen(
+                onAddFood = { date, meal -> navigator.navigate(AddFoodRoute(date.toEpochDay(), meal)) },
+                onEditEntry = { entry ->
+                    navigator.navigate(
+                        if (entry.isQuick) {
+                            QuickEntryRoute(entry.date.toEpochDay(), entry.meal, entry.id)
+                        } else {
+                            PortionRoute(PortionTarget.ExistingEntry(entry.id))
+                        },
+                    )
+                },
+            )
+        }
+        entry<AddFoodRoute> { route ->
+            AddFoodScreen(
+                route = route,
+                onBack = { navigator.goBack() },
+                onQuickEntry = { navigator.navigate(QuickEntryRoute(route.epochDay, route.meal)) },
+                onCreateCustom = { navigator.navigate(CustomFoodRoute(logTo = LogTarget(route.epochDay, route.meal))) },
+                onLogFood = { food ->
+                    navigator.navigate(PortionRoute(PortionTarget.NewFromCustomFood(food.id, route.epochDay, route.meal)))
+                },
+                onEditFood = { food -> navigator.navigate(CustomFoodRoute(customFoodId = food.id)) },
+            )
+        }
+        entry<QuickEntryRoute> { route ->
+            QuickEntryScreen(route = route, onBack = { navigator.goBack() }, onDone = { navigator.popToTopLevelRoot() })
+        }
+        entry<PortionRoute> { route ->
+            PortionScreen(route = route, onBack = { navigator.goBack() }, onDone = { navigator.popToTopLevelRoot() })
+        }
+        entry<CustomFoodRoute> { route ->
+            val logTo = route.logTo
+            CustomFoodScreen(
+                route = route,
+                onBack = { navigator.goBack() },
+                onSaved = { foodId, isNew ->
+                    if (isNew && logTo != null) {
+                        // A new food from the add flow goes straight on to choosing the amount.
+                        navigator.replaceCurrent(
+                            PortionRoute(PortionTarget.NewFromCustomFood(foodId, logTo.epochDay, logTo.meal)),
+                        )
+                    } else {
+                        navigator.goBack()
+                    }
+                },
+                onDeleted = { navigator.goBack() },
+            )
+        }
         entry<WeightRoute> { WeightScreen() }
         entry<StatsRoute> { StatsScreen() }
         entry<ProfileRoute> { ProfileScreen() }

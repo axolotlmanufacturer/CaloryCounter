@@ -54,7 +54,7 @@ class DiaryEntryTest {
 
     @Test
     fun portionEntriesScaleTheirGramsByTheNumberOfPortions() {
-        val twoPortions = entry(amount = 2.0, unit = AmountUnit.PORTION, grams = 60.0)
+        val twoPortions = entry(amount = 2.0, unit = "Portion (30 g)", grams = 60.0)
         val threeAndAHalf = twoPortions.withAmount(3.5)
         assertEquals(3.5, threeAndAHalf.amount, 1e-9)
         assertEquals(105.0, threeAndAHalf.grams, 1e-9)
@@ -100,8 +100,8 @@ class DiaryEntryTest {
 
     @Test
     fun theUnitOfAnEntryIsReconstructedFromItsSnapshot() {
-        val unit = AmountUnit.of(entry(amount = 2.0, unit = AmountUnit.PORTION, grams = 60.0))
-        assertEquals(AmountUnit.PORTION, unit.key)
+        val unit = AmountUnit.of(entry(amount = 2.0, unit = "Portion (30 g)", grams = 60.0))
+        assertEquals("Portion (30 g)", unit.key)
         assertEquals(30.0, unit.gramsPerUnit, 1e-9)
         assertEquals(90.0, unit.toGrams(3.0), 1e-9)
     }
@@ -118,9 +118,17 @@ class AmountUnitTest {
     @Test
     fun aKnownServingAddsAPortionUnit() {
         val units = AmountUnit.forFood(PerUnit.GRAM, 30.0)
-        assertEquals(listOf("g", AmountUnit.PORTION), units.map { it.key })
+        assertEquals(listOf("g", "Portion (30 g)"), units.map { it.key })
         assertEquals(30.0, units[1].gramsPerUnit, 1e-9)
         assertEquals(true, units[0].isBase)
         assertEquals(false, units[1].isBase)
+    }
+
+    @Test
+    fun theLabelNamesTheServingInGramsOrMilliliters() {
+        assertEquals("Portion (30 g)", AmountUnit.portion(30.0, PerUnit.GRAM).key)
+        assertEquals("Portion (37,5 g)", AmountUnit.portion(37.5, PerUnit.GRAM).key)
+        assertEquals("Portion (250 ml)", AmountUnit.portion(250.0, PerUnit.MILLILITER).key)
+        assertEquals("Portion (330 ml)", AmountUnit.forFood(PerUnit.MILLILITER, 330.0)[1].key)
     }
 }

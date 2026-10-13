@@ -19,9 +19,27 @@ fun TabScaffold(
     snackbarHost: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
+    TabScaffold(
+        topBar = { TopAppBar(title = { Text(title) }) },
+        modifier = modifier,
+        bottomBar = bottomBar,
+        snackbarHost = snackbarHost,
+        content = content,
+    )
+}
+
+/** The same scaffold with a custom top bar (the date switcher of Heute). */
+@Composable
+fun TabScaffold(
+    topBar: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    bottomBar: @Composable () -> Unit = {},
+    snackbarHost: @Composable () -> Unit = {},
+    content: @Composable (PaddingValues) -> Unit,
+) {
     Scaffold(
         modifier = modifier,
-        topBar = { TopAppBar(title = { Text(title) }) },
+        topBar = topBar,
         bottomBar = bottomBar,
         snackbarHost = snackbarHost,
         content = content,

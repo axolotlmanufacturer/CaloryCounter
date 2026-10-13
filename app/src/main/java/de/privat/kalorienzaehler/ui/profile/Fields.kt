@@ -60,11 +60,13 @@ fun DecimalField(
     hint: String? = null,
     maxFractionDigits: Int = 1,
     imeAction: ImeAction = ImeAction.Next,
+    suffix: String? = null,
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = { new -> if (DecimalInput.isAcceptablePartial(new, maxFractionDigits)) onValueChange(new) },
         label = { Text(label) },
+        suffix = suffix?.let { text -> { Text(text) } },
         isError = error != null,
         supportingText = (error ?: hint)?.let { text -> { Text(text) } },
         singleLine = true,

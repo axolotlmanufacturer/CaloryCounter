@@ -1,10 +1,11 @@
 package de.privat.kalorienzaehler.ui.navigation
 
 import androidx.navigation3.runtime.NavKey
+import de.privat.kalorienzaehler.domain.diary.Meal
 import kotlinx.serialization.Serializable
 
 // Navigation 3 keys. They are @Serializable so the back stacks survive process death.
-// Full-screen routes (search, scanner, food detail) are added in the phases that implement them.
+// Days travel as epoch days (a plain Long) because LocalDate is not serializable out of the box.
 
 @Serializable
 data object TodayRoute : NavKey
@@ -17,3 +18,37 @@ data object StatsRoute : NavKey
 
 @Serializable
 data object ProfileRoute : NavKey
+
+/** Full screen: pick a food for [meal] on the day [epochDay]. */
+@Serializable
+data class AddFoodRoute(val epochDay: Long, val meal: Meal) : NavKey
+
+/** Full screen: Schnelleintrag. With [entryId] it edits that quick entry instead of adding one. */
+@Serializable
+data class QuickEntryRoute(val epochDay: Long, val meal: Meal, val entryId: Long? = null) : NavKey
+
+/** Full screen: amount, meal and preview, either for a new entry or for an existing one. */
+@Serializable
+data class PortionRoute(val target: PortionTarget) : NavKey
+
+@Serializable
+sealed interface PortionTarget {
+    /** Log [customFoodId] to [meal] on the day [epochDay]. */
+    @Serializable
+    data class NewFromCustomFood(val customFoodId: Long, val epochDay: Long, val meal: Meal) : PortionTarget
+
+    /** Change the amount or meal of the logged entry [entryId]. */
+    @Serializable
+    data class ExistingEntry(val entryId: Long) : PortionTarget
+}
+
+/**
+ * Full screen: create ([customFoodId] = null) or edit a custom food. When created from the add flow,
+ * [logTo] says where to continue: straight to the amount screen for the new food.
+ */
+@Serializable
+data class CustomFoodRoute(val customFoodId: Long? = null, val logTo: LogTarget? = null) : NavKey
+
+/** A day and meal that a food is being logged to. */
+@Serializable
+data class LogTarget(val epochDay: Long, val meal: Meal)

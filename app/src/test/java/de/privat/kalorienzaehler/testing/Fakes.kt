@@ -1,7 +1,12 @@
 package de.privat.kalorienzaehler.testing
 
+import de.privat.kalorienzaehler.data.repository.CustomFoodRepository
+import de.privat.kalorienzaehler.data.repository.DiaryRepository
 import de.privat.kalorienzaehler.data.repository.ProfileRepository
 import de.privat.kalorienzaehler.data.repository.WeightRepository
+import de.privat.kalorienzaehler.domain.diary.CustomFood
+import de.privat.kalorienzaehler.domain.diary.DiaryEntry
+import de.privat.kalorienzaehler.domain.diary.Meal
 import de.privat.kalorienzaehler.domain.model.UserProfile
 import de.privat.kalorienzaehler.domain.weight.WeightPoint
 import java.io.IOException
@@ -74,5 +79,115 @@ class FakeWeightRepository @Inject constructor() : WeightRepository {
 
     override suspend fun delete(date: LocalDate) {
         entries.value = entries.value - date
+    }
+}
+
+@Singleton
+class FakeDiaryRepository @Inject constructor() : DiaryRepository {
+
+    private val entries = MutableStateFlow<Map<Long, DiaryEntry>>(emptyMap())
+    private var nextId = 1L
+    var failWrites = false
+
+    /** Every stored entry, oldest first (for assertions). */
+    val stored: List<DiaryEntry> get() = entries.value.values.sortedWith(ORDER)
+
+    /** Puts entries into the diary; entries with id 0 get a fresh one. Returns them as stored. */
+    fun preset(vararg presets: DiaryEntry): List<DiaryEntry> = presets.map { entry ->
+        val withId = if (entry.id == 0L) entry.copy(id = nextId++) else entry.also { nextId = maxOf(nextId, it.id + 1) }
+        entries.value = entries.value + (withId.id to withId)
+        withId
+    }
+
+    override fun observeDay(date: LocalDate): Flow<List<DiaryEntry>> =
+        entries.map { all -> all.values.filter { it.date == date }.sortedWith(ORDER) }
+
+    override suspend fun get(id: Long): DiaryEntry? = entries.value[id]
+
+    override suspend fun add(entry: DiaryEntry): Long {
+        if (failWrites) throw IOException("disk full")
+        val id = nextId++
+        entries.value = entries.value + (id to entry.copy(id = id))
+        return id
+    }
+
+    override suspend fun update(entry: DiaryEntry) {
+        if (failWrites) throw IOException("disk full")
+        entries.value = entries.value + (entry.id to entry)
+    }
+
+    override suspend fun delete(id: Long) {
+        entries.value = entries.value - id
+    }
+
+    override suspend fun restore(entry: DiaryEntry) {
+        entries.value = entries.value + (entry.id to entry)
+    }
+
+    override suspend fun copyMeal(from: LocalDate, to: LocalDate, meal: Meal, createdAtMillis: Long): List<Long> {
+        if (failWrites) throw IOException("disk full")
+        val copies = entries.value.values
+            .filter { it.date == from && it.meal == meal }
+            .sortedWith(ORDER)
+            .map { it.copiedTo(to, createdAtMillis) }
+        return copies.map { copy -> add(copy) }
+    }
+
+    override suspend fun deleteAll(ids: List<Long>) {
+        entries.value = entries.value - ids.toSet()
+    }
+
+    override suspend fun deleteEverything() {
+        entries.value = emptyMap()
+    }
+
+    private companion object {
+        val ORDER = compareBy<DiaryEntry>({ it.createdAtMillis }, { it.id })
+    }
+}
+
+@Singleton
+class FakeCustomFoodRepository @Inject constructor() : CustomFoodRepository {
+
+    private val foods = MutableStateFlow<Map<Long, CustomFood>>(emptyMap())
+    private val recentIds = MutableStateFlow<List<Long>>(emptyList())
+    private var nextId = 1L
+    var failWrites = false
+
+    val stored: List<CustomFood> get() = foods.value.values.sortedBy { it.id }
+
+    /** Puts foods into the repository; foods with id 0 get a fresh one. Returns them as stored. */
+    fun preset(vararg presets: CustomFood): List<CustomFood> = presets.map { food ->
+        val withId = if (food.id == 0L) food.copy(id = nextId++) else food.also { nextId = maxOf(nextId, it.id + 1) }
+        foods.value = foods.value + (withId.id to withId)
+        withId
+    }
+
+    /** What "Zuletzt" shows: these foods, in this order. */
+    fun presetRecent(vararg ids: Long) {
+        recentIds.value = ids.toList()
+    }
+
+    override fun observeAll(): Flow<List<CustomFood>> =
+        foods.map { all -> all.values.sortedWith(compareBy({ it.name.lowercase() }, { it.id })) }
+
+    override fun observeRecent(since: LocalDate, limit: Int): Flow<List<CustomFood>> =
+        kotlinx.coroutines.flow.combine(foods, recentIds) { all, ids -> ids.mapNotNull(all::get).take(limit) }
+
+    override suspend fun get(id: Long): CustomFood? = foods.value[id]
+
+    override suspend fun save(food: CustomFood): Long {
+        if (failWrites) throw IOException("disk full")
+        val id = if (food.id == 0L) nextId++ else food.id
+        foods.value = foods.value + (id to food.copy(id = id))
+        return id
+    }
+
+    override suspend fun delete(id: Long) {
+        foods.value = foods.value - id
+    }
+
+    override suspend fun deleteEverything() {
+        foods.value = emptyMap()
     }
 }
