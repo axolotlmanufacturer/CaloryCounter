@@ -9,7 +9,7 @@ hilt = "2.60.1"
 androidxCore = "1.19.1"
 activityCompose = "1.13.0"
 lifecycle = "2.11.0"
-navigation = "2.10.2"
+navigation3 = "1.2.0"
 composeBom = "2026.09.00"
 
 # Kotlin libraries
@@ -27,7 +27,9 @@ espresso = "3.7.0"
 androidx-core = { module = "androidx.core:core", version.ref = "androidxCore" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
-androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
+androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
+androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }
 
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 compose-ui = { module = "androidx.compose.ui:ui" }

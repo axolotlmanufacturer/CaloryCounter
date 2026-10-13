@@ -56,7 +56,7 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
 - `:domain`: pure Kotlin/JVM, no Android imports. Holds calculators (BMR, TDEE, goal/safety
   rules, macros, weight trend, projections, adaptive TDEE), models, text normalization,
   barcode normalization and German number formatting/parsing.
-- `:app`: single activity, Jetpack Compose + Material 3, Navigation Compose, Hilt.
+- `:app`: single activity, Jetpack Compose + Material 3, **Navigation 3**, Hilt.
   - `data/fooddb/`: **read-only** Room DB `foods.db`, created from an asset with FTS4 search.
   - `data/userdb/`: **read-write** Room DB `user.db` (diary, weight, custom foods, favorites).
     Exported schemas are in `app/schemas/` (committed). Use explicit migrations; no
@@ -92,6 +92,11 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
 ## Decisions
 
 - Native Kotlin + Compose (PROMPT.md §3). Gradle Kotlin DSL, version catalog, KSP (no kapt).
+- **Navigation 3** instead of the spec's Navigation Compose (§3): Nav2 is in maintenance mode, Nav3
+  1.2.0 is stable. Chosen by the user in Phase 2. `ui/navigation/`: `@Serializable` `NavKey` routes,
+  `NavigationState` (one back stack per tab, survives process death; pattern from
+  android/nav3-recipes "multiplestacks") and `Navigator`; `NavDisplay` takes the decorated entries.
+  ViewModels are scoped per entry via `lifecycle-viewmodel-navigation3`'s decorator.
 - Toolchain: AGP 9.4.1 with **built-in Kotlin** (never apply `org.jetbrains.kotlin.android`),
   Kotlin 2.4.21 pinned via the root `plugins { … apply false }` block, Gradle 9.7.1 (9.8.x
   prints deprecation warnings with AGP 9.4.1; KGP 2.4.21 is tested up to Gradle 9.7),
@@ -197,5 +202,3 @@ present after any `./gradlew --version`):
   or add the Hilt test setup (`hilt-android-testing`, `kspTest`, `HiltTestApplication`).
 - Phase 7: Material 3's `NavigationBarItem` has a fixed 80 dp height, so tab labels clip at 200 %
   font scale (PROMPT.md §8); needs a custom bar or `ShortNavigationBar` check.
-- Navigation Compose (Nav2) is in maintenance mode (critical fixes only); Navigation 3 is stable.
-  The spec mandates Navigation Compose, so a switch needs the user's decision.

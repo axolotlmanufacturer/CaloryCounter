@@ -9,47 +9,55 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavDestination
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
 import de.privat.kalorienzaehler.ui.navigation.ProfileRoute
 import de.privat.kalorienzaehler.ui.navigation.StatsRoute
 import de.privat.kalorienzaehler.ui.navigation.TodayRoute
 import de.privat.kalorienzaehler.ui.navigation.TopLevelDestination
 import de.privat.kalorienzaehler.ui.navigation.WeightRoute
+import de.privat.kalorienzaehler.ui.navigation.Navigator
+import de.privat.kalorienzaehler.ui.navigation.rememberNavigationState
 import de.privat.kalorienzaehler.ui.settings.ProfileScreen
 import de.privat.kalorienzaehler.ui.stats.StatsScreen
 import de.privat.kalorienzaehler.ui.today.TodayScreen
 import de.privat.kalorienzaehler.ui.weight.WeightScreen
 
-/** App root: bottom navigation (Heute · Gewicht · Statistik · Profil) around the nav host. */
+private val TOP_LEVEL_ROUTES: Set<NavKey> = TopLevelDestination.entries.map { it.route }.toSet()
+
+/** App root: bottom navigation (Heute · Gewicht · Statistik · Profil) around the Navigation 3 display. */
 @Composable
-fun KalorienzaehlerRoot(navController: NavHostController = rememberNavController()) {
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = backStackEntry?.destination
+fun KalorienzaehlerRoot() {
+    val navigationState = rememberNavigationState(
+        startRoute = TodayRoute,
+        topLevelRoutes = TOP_LEVEL_ROUTES,
+    )
+    val navigator = remember(navigationState) { Navigator(navigationState) }
+
+    val entryProvider = entryProvider {
+        entry<TodayRoute> { TodayScreen() }
+        entry<WeightRoute> { WeightScreen() }
+        entry<StatsRoute> { StatsScreen() }
+        entry<ProfileRoute> { ProfileScreen() }
+    }
 
     Scaffold(
         // Insets are handled by the bottom bar and by each screen's own top app bar.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             // Full-screen routes added in later phases hide the bottom bar.
-            if (currentDestination == null || currentDestination.isTopLevel()) {
+            if (navigationState.isAtTopLevelRoot) {
                 NavigationBar {
                     TopLevelDestination.entries.forEach { destination ->
-                        val selected = currentDestination.isInHierarchy(destination)
+                        val selected = destination.route == navigationState.topLevelRoute
                         NavigationBarItem(
                             selected = selected,
-                            onClick = { navController.navigateToTopLevel(destination) },
+                            onClick = { navigator.navigate(destination.route) },
                             icon = {
                                 Icon(
                                     painter = painterResource(
@@ -66,32 +74,12 @@ fun KalorienzaehlerRoot(navController: NavHostController = rememberNavController
             }
         },
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = TodayRoute,
+        NavDisplay(
+            entries = navigationState.toDecoratedEntries(entryProvider),
+            onBack = { navigator.goBack() },
             modifier = Modifier
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding),
-        ) {
-            composable<TodayRoute> { TodayScreen() }
-            composable<WeightRoute> { WeightScreen() }
-            composable<StatsRoute> { StatsScreen() }
-            composable<ProfileRoute> { ProfileScreen() }
-        }
-    }
-}
-
-private fun NavDestination?.isInHierarchy(destination: TopLevelDestination): Boolean =
-    this?.hierarchy?.any { it.hasRoute(destination.routeClass) } == true
-
-private fun NavDestination.isTopLevel(): Boolean =
-    TopLevelDestination.entries.any { isInHierarchy(it) }
-
-private fun NavHostController.navigateToTopLevel(destination: TopLevelDestination) {
-    navigate(destination.route) {
-        // Keep one back stack entry per tab and restore each tab's state when re-selected.
-        popUpTo(graph.findStartDestination().id) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
+        )
     }
 }
