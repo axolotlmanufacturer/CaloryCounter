@@ -42,7 +42,8 @@ uv venv && uv pip install -r requirements.txt
 .venv/bin/python build_food_db.py                 # full DB (release)
 .venv/bin/pytest
 
-# Cloud container: install the Android SDK etc. (needs dl.google.com)
+# Cloud container: install the Android SDK etc. (needs dl.google.com). Runs automatically via
+# the SessionStart hook (.claude/hooks/session-start.sh) in Claude Code cloud sessions.
 bash scripts/cloud-setup.sh
 
 # Verify there is no INTERNET permission in an APK
@@ -141,8 +142,15 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   (`services.gradle.org` redirects the zip to GitHub releases), Maven Central and Google's
   Maven Central mirror, the Gradle Plugin Portal, PyPI, raw.githubusercontent.com and the OFF
   S3 bucket (`openfoodfacts-ds.s3.eu-west-3.amazonaws.com`).
-- The cloud container is ephemeral. The Android SDK, venv and raw data must be reinstalled or
-  re-downloaded per session. Push work before ending a session.
+- The cloud container is ephemeral. Push work before ending a session. The SessionStart hook
+  (`.claude/settings.json` → `.claude/hooks/session-start.sh`) runs `scripts/cloud-setup.sh` in
+  cloud sessions only (`CLAUDE_CODE_REMOTE=true`), synchronously (~6.5 min on a fresh container,
+  under a second once installed) and exports `ANDROID_HOME`. Do **not** reference repo files from
+  the environment's *Setup script*: it runs before the repository is cloned.
+- `sdkmanager` (cmdline-tools 2026) is deprecated and delegates to the new Android CLI
+  (`cmdline-tools/latest/bin/android sdk install …`); `--licenses` is no longer needed but harmless.
+- The configuration cache is invalidated whenever the container's proxy port (in
+  `JAVA_TOOL_OPTIONS`) changes, i.e. on every new session. Expected, not a bug.
 - No `/dev/kvm`, so no emulator or Gradle Managed Devices in the cloud container.
 - SDK package ids for new platforms carry a minor version: `platforms;android-37.0` (not `android-37`).
 - Robolectric downloads `android-all-instrumented:17-robolectric-15733970-i7` (~240 MB) from Maven

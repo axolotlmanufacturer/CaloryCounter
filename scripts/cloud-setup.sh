@@ -70,7 +70,14 @@ PY
 }
 
 install_sdk_packages() {
-  local sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+  local sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" package missing=0
+  for package in "${SDK_PACKAGES[@]}"; do
+    [[ -d "$ANDROID_HOME/${package//;//}" ]] || missing=1
+  done
+  if [[ "$missing" == 0 ]]; then
+    log "SDK packages already installed"
+    return
+  fi
   log "accepting SDK licenses"
   (yes || true) | "$sdkmanager" --sdk_root="$ANDROID_HOME" --licenses >/dev/null
   log "installing ${SDK_PACKAGES[*]}"
