@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 8.0–8.1 (API 26–27). These versions cannot tell cloud backup from
+    device-to-device transfer, so privacy wins: nothing is backed up at all.
+    API 28–30 use res/xml-v28/backup_rules.xml; API 31+ use data_extraction_rules.xml.
+-->
+<full-backup-content>
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
+</full-backup-content>

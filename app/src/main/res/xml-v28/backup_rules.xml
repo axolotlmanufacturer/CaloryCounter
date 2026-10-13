@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 9–11 (API 28–30). Files are included only when the transport is a
+    device-to-device transfer; with an <include> present, nothing else is backed up,
+    so cloud backup stays empty (PROMPT.md §2.5).
+-->
+<full-backup-content>
+    <include domain="file" path="." requireFlags="deviceToDeviceTransfer" />
+    <include domain="database" path="." requireFlags="deviceToDeviceTransfer" />
+    <include domain="sharedpref" path="." requireFlags="deviceToDeviceTransfer" />
+</full-backup-content>

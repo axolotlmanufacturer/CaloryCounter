@@ -42,6 +42,9 @@ uv venv && uv pip install -r requirements.txt
 .venv/bin/python build_food_db.py                 # full DB (release)
 .venv/bin/pytest
 
+# Cloud container: install the Android SDK etc. (needs dl.google.com)
+bash scripts/cloud-setup.sh
+
 # Verify there is no INTERNET permission in an APK
 $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/release/app-release.apk
 ```
@@ -65,7 +68,13 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
 ## Conventions
 
 - **All user-facing text lives in `res/values/strings.xml`** (German is the default locale).
-  No hardcoded strings in Composables. Lint treats `HardcodedText` as an error.
+  No hardcoded strings in Composables. Lint's `HardcodedText` only covers XML, so
+  `NoHardcodedUiStringsTest` scans the Kotlin sources for literals passed to `Text(…)`,
+  `contentDescription = …`, `title = …` and similar.
+- Icons: Material Symbols vector drawables in `res/drawable/ic_*_24.xml` (outlined; `*_filled_*`
+  for selected states), downloaded from `google/material-design-icons` (`symbols/android/…`)
+  with the `android:tint="?attr/colorControlNormal"` line removed (that attr needs AppCompat).
+  Do not add `material-icons-extended` (frozen, slow builds).
 - German formatting everywhere: `1.234 kcal`, `72,4 kg`, `13.10.2026`. Weeks start on Monday.
   Metric only. Number inputs accept both `,` and `.`.
 - Dates: `java.time` only. Day boundaries use the device time zone. Inject a `Clock` for testability.
@@ -81,6 +90,18 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
 ## Decisions
 
 - Native Kotlin + Compose (PROMPT.md §3). Gradle Kotlin DSL, version catalog, KSP (no kapt).
+- Toolchain: AGP 9.4.1 with **built-in Kotlin** (never apply `org.jetbrains.kotlin.android`),
+  Kotlin 2.4.21 pinned via the root `plugins { … apply false }` block, Gradle 9.7.1 (9.8.x
+  prints deprecation warnings with AGP 9.4.1; KGP 2.4.21 is tested up to Gradle 9.7),
+  compileSdk/targetSdk 37 (required by Compose 1.12 / Lifecycle 2.11), minSdk 26, Java 17
+  bytecode. Compose BOM 2026.09.00 (Compose 1.12.1, Material3 1.4.0).
+- AGP 9 defaults to keep in mind: unit tests exist only for the debug build type
+  (`./gradlew test` = `testDebugUnitTest` + JVM modules); app `R` fields are non-final
+  (no `R.*` in `when` branches); `proguard-rules.pro` must exist; BuildConfig is enabled
+  explicitly in `:app`.
+- Compose UI tests use the v2 APIs (`androidx.compose.ui.test.junit4.v2.createComposeRule`).
+- Theme fallback colors (`ui/theme/Color.kt`) are generated from `#2E7D5B` with Material Color
+  Utilities (tonal spot, spec 2021) — regenerate, don't hand-edit.
 - Offline by design: `INTERNET` is removed via `tools:node="remove"`. No analytics, Firebase or
   Play Services. The only runtime permission is `CAMERA`, requested in context.
 - Backup: cloud backup excludes everything; device-to-device transfer is allowed (API 31+
@@ -108,3 +129,20 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   re-downloaded per session. Push work before ending a session.
 - No `/dev/kvm`, so no emulator or Gradle Managed Devices in the cloud container.
 - The system Gradle in the container (8.14.3) is too old for AGP 9.x. Always use `./gradlew`.
+- `repo.maven.apache.org` answers **429** through the container proxy; `repo1.maven.org` works.
+  `scripts/cloud-setup.sh` installs `~/.gradle/init.d/maven-central-repo1.init.gradle.kts`
+  (copy in `scripts/gradle/`) so Gradle prefers repo1. Not needed on a normal machine.
+- The committed `gradle-wrapper.jar` is the official 8.14.x wrapper jar (generated offline);
+  it downloads the pinned 9.7.1 distribution (SHA-256 checked). Once `downloads.gradle.org` is
+  reachable, refresh it with `./gradlew wrapper --gradle-version 9.7.1
+  --gradle-distribution-sha256-sum acd53f1edaf02f1a8ff99879f8a34b302661a057d9b063ae9e35b552f804d20a`.
+- `:domain` can be tested without the Android SDK: see "Testing `:domain` without the SDK".
+
+## Testing `:domain` without the SDK
+
+When Google Maven / the Gradle distribution are unreachable, the pure-Kotlin module can still be
+built with the system Gradle from a throwaway settings file outside the repo, e.g.
+`settings.gradle.kts` with `include(":domain"); project(":domain").projectDir = file("<repo>/domain")`
+plus a `gradle/libs.versions.toml` containing only `kotlin`, `junit`, `kotlin-test` and the
+`kotlin-jvm` plugin, then
+`gradle -I <repo>/scripts/gradle/maven-central-repo1.init.gradle.kts :domain:test`.

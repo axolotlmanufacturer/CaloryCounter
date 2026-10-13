@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- German is the default (and only) locale. All user-facing text lives here (PROMPT.md §2.3). -->
+<resources>
+    <string name="app_name">Kalorienzähler</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_today">Heute</string>
+    <string name="nav_weight">Gewicht</string>
+    <string name="nav_stats">Statistik</string>
+    <string name="nav_profile">Profil</string>
+
+    <!-- Empty states -->
+    <string name="today_empty_title">Dein Tag ist noch leer</string>
+    <string name="today_empty_message">Hier erscheinen deine Mahlzeiten und wie viele Kalorien heute noch übrig sind.</string>
+    <string name="weight_empty_title">Noch keine Gewichtseinträge</string>
+    <string name="weight_empty_message">Hier siehst du deinen Gewichtsverlauf mit Trendlinie und deinen Weg zum Zielgewicht.</string>
+    <string name="stats_empty_title">Noch keine Auswertungen</string>
+    <string name="stats_empty_message">Sobald du ein paar Tage erfasst hast, findest du hier deine Wochen- und Monatsübersicht.</string>
+    <string name="profile_empty_title">Dein Profil</string>
+    <string name="profile_empty_message">Hier verwaltest du deine Körperdaten, dein Ziel und die Einstellungen.</string>
+</resources>
