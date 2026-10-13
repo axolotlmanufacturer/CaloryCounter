@@ -105,6 +105,8 @@ dependencies {
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
+    // ui-test-junit4 pulls espresso-core 3.5.0, which calls InputManager.getInstance() (gone in SDK 37).
+    testImplementation(libs.androidx.test.espresso.core)
 
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)

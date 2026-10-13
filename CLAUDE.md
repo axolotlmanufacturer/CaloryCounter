@@ -153,6 +153,13 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   `JAVA_TOOL_OPTIONS`) changes, i.e. on every new session. Expected, not a bug.
 - No `/dev/kvm`, so no emulator or Gradle Managed Devices in the cloud container.
 - SDK package ids for new platforms carry a minor version: `platforms;android-37.0` (not `android-37`).
+- Compose `ui-test-junit4` pulls Espresso 3.5.0, whose idling calls `InputManager.getInstance()`,
+  which no longer exists in the SDK 37 framework (Robolectric fails with `NoSuchMethodException`).
+  `espresso-core` 3.7.0 is pinned on the unit-test classpath to fix it.
+- Material3 1.4.0's `TopAppBar` is still `@ExperimentalMaterial3Api` (the compiler is the judge,
+  not API dumps of later versions).
+- Expected lint warnings: `AndroidGradlePluginVersion` (Gradle 9.8.x exists; 9.7.1 is deliberate)
+  and `ChromeOsAbiSupport` (release ships only ARM ABIs per PROMPT.md §9).
 - Robolectric downloads `android-all-instrumented:17-robolectric-15733970-i7` (~240 MB) from Maven
   Central on the first test run without retrying; `scripts/cloud-setup.sh` prefetches it into `~/.m2`.
 - The system Gradle in the container (8.14.3) is too old for AGP 9.x. Always use `./gradlew`.
