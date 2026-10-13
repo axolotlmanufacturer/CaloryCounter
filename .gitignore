@@ -1,0 +1,41 @@
+# --- Gradle / Kotlin ---
+.gradle/
+build/
+.kotlin/
+!gradle/wrapper/gradle-wrapper.jar
+
+# --- Android ---
+local.properties
+captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+.externalNativeBuild/
+.cxx/
+app/release/
+app/debug/
+
+# --- IDEs / OS ---
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- Signing (never commit keys or passwords) ---
+keystore.properties
+*.jks
+*.keystore
+
+# --- Food database pipeline ---
+tools/food-db-builder/data/raw/
+tools/food-db-builder/out/foods-full.db
+tools/food-db-builder/out/*.report.txt
+tools/food-db-builder/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Large generated food DB in app assets (the build copies it in; see CLAUDE.md)
+app/src/main/assets/databases/foods.db
