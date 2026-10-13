@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -64,12 +65,23 @@ android {
         error += setOf("HardcodedText", "SetTextI18n")
     }
 
+    sourceSets {
+        // Room's exported schemas are test assets (migration tests from phase 3 on).
+        getByName("androidTest").assets.directories.add("$projectDir/schemas")
+        getByName("test").assets.directories.add("$projectDir/schemas")
+    }
+
     testOptions {
         unitTests {
             // Robolectric needs the merged resources and manifest.
             isIncludeAndroidResources = true
         }
     }
+}
+
+room {
+    // Exported schemas are committed; every schema change needs an explicit migration.
+    schemaDirectory("$projectDir/schemas")
 }
 
 tasks.withType<Test>().configureEach {
@@ -99,6 +111,12 @@ dependencies {
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.kotlinx.serialization.core)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.room.runtime)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.datastore.preferences)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
@@ -118,6 +136,10 @@ dependencies {
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(libs.hilt.android.testing)
+    kspTest(libs.hilt.compiler)
     // ui-test-junit4 pulls espresso-core 3.5.0, which calls InputManager.getInstance() (gone in SDK 37).
     testImplementation(libs.androidx.test.espresso.core)
 
