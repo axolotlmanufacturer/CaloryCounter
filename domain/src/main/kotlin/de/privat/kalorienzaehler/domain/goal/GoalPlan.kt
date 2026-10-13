@@ -11,7 +11,10 @@ import java.time.LocalDate
  */
 sealed interface GoalNotice {
 
-    /** Under 18: no weight goal is set, the plan is maintenance only. */
+    /** Under 18: the formulas are not made for minors, so every number is only a rough orientation. */
+    data object EstimateNotMadeForMinors : GoalNotice
+
+    /** Under 18: a wished weight goal is ignored, the plan is maintenance only. */
     data object GoalRequiresAdult : GoalNotice
 
     /** BMI below 18.5: "Abnehmen" is not offered, the plan is maintenance. */

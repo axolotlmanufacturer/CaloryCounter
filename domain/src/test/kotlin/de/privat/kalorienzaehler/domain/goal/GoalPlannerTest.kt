@@ -109,10 +109,16 @@ class GoalPlannerTest {
         val plan = GoalPlanner.plan(profile(age = 17, goal = lose(0.5)), weightKg = 70.0, today = TODAY)
         assertEquals(GoalType.MAINTAIN, plan.goalType)
         assertEquals(plan.tdeeKcal, plan.targetKcal, 1e-9)
-        assertTrue(GoalNotice.GoalRequiresAdult in plan.notices)
+        assertEquals(listOf(GoalNotice.EstimateNotMadeForMinors, GoalNotice.GoalRequiresAdult), plan.notices)
 
         val gainPlan = GoalPlanner.plan(profile(age = 17, goal = gain(0.5)), weightKg = 70.0, today = TODAY)
         assertEquals(GoalType.MAINTAIN, gainPlan.goalType)
+    }
+
+    @Test
+    fun rule1_minorsKeepingTheirWeightStillGetTheCaveatAboutTheFormulas() {
+        val plan = GoalPlanner.plan(profile(age = 15, goal = Goal.MAINTAIN), weightKg = 55.0, today = TODAY)
+        assertEquals(listOf<GoalNotice>(GoalNotice.EstimateNotMadeForMinors), plan.notices)
     }
 
     @Test
@@ -120,6 +126,7 @@ class GoalPlannerTest {
         val plan = GoalPlanner.plan(profile(age = 18, goal = lose(0.5)), weightKg = 80.0, today = TODAY)
         assertEquals(GoalType.LOSE, plan.goalType)
         assertTrue(GoalNotice.GoalRequiresAdult !in plan.notices)
+        assertTrue(GoalNotice.EstimateNotMadeForMinors !in plan.notices)
     }
 
     @Test

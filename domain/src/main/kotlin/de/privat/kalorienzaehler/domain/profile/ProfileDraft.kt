@@ -60,6 +60,13 @@ data class DraftEvaluation(
     val ageYears: Int?,
 ) {
     val isValid: Boolean get() = errors.isEmpty()
+
+    /** Weight goals are for adults only (§6.4 rule 1); unknown age does not block anything yet. */
+    val goalAllowed: Boolean get() = ageYears?.let(ProfileValidation::isGoalAllowed) ?: true
+
+    /** "Abnehmen" is offered to adults with a BMI of at least 18,5 (§6.4 rules 1 and 4). */
+    val loseOffered: Boolean
+        get() = goalAllowed && (plan?.bmi?.let { it >= BodyMetrics.MIN_NORMAL_BMI } ?: true)
 }
 
 /**

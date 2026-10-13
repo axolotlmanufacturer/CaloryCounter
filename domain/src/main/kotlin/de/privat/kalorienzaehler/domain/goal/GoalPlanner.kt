@@ -16,7 +16,7 @@ import kotlin.math.min
  * Turns a profile and the current weight into the daily calorie target (PROMPT.md §6.3) and
  * enforces the safety rules of §6.4:
  *
- * 1. Under 18 there is no weight goal.
+ * 1. Under 18 there is no weight goal (and the numbers come with a caveat: the formulas are not made for minors).
  * 2. The weekly loss rate is capped at 1 % of the current body weight.
  * 3. The target never falls below 1.200 kcal (female) / 1.500 kcal (male); the real rate is recomputed.
  * 4. With a BMI below 18.5 "Abnehmen" is not offered (the plan falls back to maintenance).
@@ -66,6 +66,8 @@ object GoalPlanner {
             BmrFormula.KATCH_MCARDLE -> Bmr.katchMcArdle(weightKg, checkNotNull(profile.bodyFatPercent))
         }
         val tdee = Tdee.of(bmr, profile.activityLevel)
+
+        if (ageYears < MIN_AGE_FOR_GOAL) notices += GoalNotice.EstimateNotMadeForMinors
 
         var goalType = profile.goal.type
         if (goalType != GoalType.MAINTAIN && ageYears < MIN_AGE_FOR_GOAL) {

@@ -161,6 +161,24 @@ class ProfileDraftTest {
     }
 
     @Test
+    fun theEvaluationSaysWhichGoalsAreOffered() {
+        val adult = draft().evaluate(TODAY)
+        assertTrue(adult.goalAllowed)
+        assertTrue(adult.loseOffered)
+
+        val minor = draft().copy(birthDate = "13.09.2010").evaluate(TODAY)
+        assertTrue(!minor.goalAllowed)
+        assertTrue(!minor.loseOffered)
+
+        val underweight = draft().copy(weightKg = "58").evaluate(TODAY) // BMI 17,9
+        assertTrue(underweight.goalAllowed)
+        assertTrue(!underweight.loseOffered)
+
+        val unknown = ProfileDraft().evaluate(TODAY)
+        assertTrue(unknown.goalAllowed && unknown.loseOffered, "nothing is blocked before the data is in")
+    }
+
+    @Test
     fun switchingTheGoalTypeKeepsTheRateValid() {
         val lose = draft().copy(weeklyRateKg = 1.0).withGoalType(GoalType.LOSE)
         assertEquals(1.0, lose.weeklyRateKg)

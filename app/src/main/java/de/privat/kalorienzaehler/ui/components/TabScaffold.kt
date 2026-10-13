@@ -15,11 +15,15 @@ import androidx.compose.ui.Modifier
 fun TabScaffold(
     title: String,
     modifier: Modifier = Modifier,
+    bottomBar: @Composable () -> Unit = {},
+    snackbarHost: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
         modifier = modifier,
         topBar = { TopAppBar(title = { Text(title) }) },
+        bottomBar = bottomBar,
+        snackbarHost = snackbarHost,
         content = content,
     )
 }
