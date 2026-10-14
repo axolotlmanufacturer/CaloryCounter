@@ -3,6 +3,8 @@ package de.privat.kalorienzaehler.testing
 import de.privat.kalorienzaehler.domain.diary.AmountUnit
 import de.privat.kalorienzaehler.domain.diary.CustomFood
 import de.privat.kalorienzaehler.domain.diary.DiaryEntry
+import de.privat.kalorienzaehler.domain.diary.Food
+import de.privat.kalorienzaehler.domain.diary.FoodKey
 import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.domain.diary.Meal
 import de.privat.kalorienzaehler.domain.diary.NutrientAmounts
@@ -75,6 +77,36 @@ fun testFood(
     createdAtMillis = 1,
     updatedAtMillis = 1,
 )
+
+/** A food of the bundled database (BLS code or EAN as [ref]); [id] is its relevance rank within the source. */
+fun testDbFood(
+    source: FoodSource,
+    ref: String,
+    name: String,
+    brand: String? = null,
+    kcal: Double = 100.0,
+    id: Long = 0,
+    popularity: Int = 0,
+    perUnit: PerUnit = PerUnit.GRAM,
+    servingG: Double? = null,
+): Food = Food(
+    id = id,
+    key = FoodKey(source, ref),
+    barcode = ref.takeIf { source == FoodSource.OFF },
+    name = name,
+    brand = brand,
+    nutrients = NutrientsPer100(kcal, protein = 10.0, carbs = 20.0, sugar = 5.0, fat = 4.0, fiber = 2.0, salt = 0.5),
+    perUnit = perUnit,
+    servingG = servingG,
+    servingLabel = servingG?.let { "Portion" },
+    popularity = popularity,
+)
+
+fun testBls(ref: String, name: String, kcal: Double = 100.0, id: Long = 0) =
+    testDbFood(FoodSource.BLS, ref, name, kcal = kcal, id = id)
+
+fun testOff(ean: String, name: String, brand: String? = null, kcal: Double = 100.0, popularity: Int = 0, id: Long = 0) =
+    testDbFood(FoodSource.OFF, ean, name, brand, kcal, id, popularity)
 
 /** The data the Heute screen shows for [date], built the same way the ViewModel does. */
 fun dayData(

@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import de.privat.kalorienzaehler.data.userdb.entity.DiaryEntryEntity
+import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.domain.diary.Meal
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +20,21 @@ interface DiaryDao {
 
     @Query("SELECT * FROM diary_entry WHERE date = :date AND meal = :meal ORDER BY created_at, id")
     suspend fun getMeal(date: LocalDate, meal: Meal): List<DiaryEntryEntity>
+
+    /**
+     * The foods logged since [since], the most often logged first (ties: the latest first). Quick entries are no
+     * foods. A food is identified by its source and reference, whatever name it was logged under.
+     */
+    @Query(
+        """
+        SELECT food_source AS source, food_ref AS ref FROM diary_entry
+        WHERE food_source IN ('CUSTOM', 'BLS', 'OFF') AND food_ref IS NOT NULL AND date >= :since
+        GROUP BY food_source, food_ref
+        ORDER BY COUNT(*) DESC, MAX(created_at) DESC, MAX(id) DESC
+        LIMIT :limit
+        """,
+    )
+    fun observeRecentFoods(since: LocalDate, limit: Int): Flow<List<RecentFoodRow>>
 
     @Query("SELECT * FROM diary_entry WHERE id = :id")
     suspend fun get(id: Long): DiaryEntryEntity?
@@ -42,3 +58,6 @@ interface DiaryDao {
     @Query("DELETE FROM diary_entry")
     suspend fun deleteEverything()
 }
+
+/** A food from the diary: where it came from and its reference there. */
+data class RecentFoodRow(val source: FoodSource, val ref: String)

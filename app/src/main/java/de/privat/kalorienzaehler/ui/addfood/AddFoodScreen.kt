@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -44,7 +45,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import de.privat.kalorienzaehler.R
-import de.privat.kalorienzaehler.domain.diary.CustomFood
+import de.privat.kalorienzaehler.data.fooddb.FoodDbStatus
+import de.privat.kalorienzaehler.domain.diary.FoodHit
+import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.domain.diary.PerUnit
 import de.privat.kalorienzaehler.ui.diary.FullScreenScaffold
 import de.privat.kalorienzaehler.ui.diary.dateLabel
@@ -60,8 +63,8 @@ fun AddFoodScreen(
     onBack: () -> Unit,
     onQuickEntry: () -> Unit,
     onCreateCustom: () -> Unit,
-    onLogFood: (CustomFood) -> Unit,
-    onEditFood: (CustomFood) -> Unit,
+    onLogFood: (FoodHit) -> Unit,
+    onEditFood: (FoodHit) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AddFoodViewModel = hiltViewModel<AddFoodViewModel, AddFoodViewModel.Factory>(
         creationCallback = { factory -> factory.create(route) },
@@ -98,8 +101,8 @@ fun AddFoodContent(
     onBack: () -> Unit,
     onQuickEntry: () -> Unit,
     onCreateCustom: () -> Unit,
-    onLogFood: (CustomFood) -> Unit,
-    onEditFood: (CustomFood) -> Unit,
+    onLogFood: (FoodHit) -> Unit,
+    onEditFood: (FoodHit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     FullScreenScaffold(
@@ -181,6 +184,11 @@ fun AddFoodContent(
                         label = { Text(stringResource(R.string.add_chip_recent)) },
                     )
                     FilterChip(
+                        selected = state?.selectedFilter == AddFilter.FAVORITES,
+                        onClick = { onSelectFilter(AddFilter.FAVORITES) },
+                        label = { Text(stringResource(R.string.add_chip_favorites)) },
+                    )
+                    FilterChip(
                         selected = state?.selectedFilter == AddFilter.CUSTOM,
                         onClick = { onSelectFilter(AddFilter.CUSTOM) },
                         label = { Text(stringResource(R.string.add_chip_custom)) },
@@ -188,24 +196,49 @@ fun AddFoodContent(
                 }
             }
             if (state != null) {
-                if (state.foods.isEmpty()) {
+                when (state.dbStatus) {
+                    FoodDbStatus.Preparing -> item(key = "db-preparing") {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            HintText(
+                                text = stringResource(R.string.add_db_preparing),
+                                modifier = Modifier.padding(start = 12.dp),
+                            )
+                        }
+                    }
+                    FoodDbStatus.Failed -> item(key = "db-failed") {
+                        HintText(
+                            text = stringResource(R.string.add_db_failed),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                    FoodDbStatus.Ready -> Unit
+                }
+                if (state.foods.isEmpty() && !state.searching && state.dbStatus != FoodDbStatus.Preparing) {
                     item(key = "empty") {
                         HintText(
                             text = stringResource(
-                                when (state.mode) {
-                                    AddMode.RECENT -> R.string.add_empty_recent
-                                    AddMode.CUSTOM -> R.string.add_empty_custom
-                                    AddMode.SEARCH -> R.string.add_no_results
+                                when {
+                                    state.queryTooShort -> R.string.add_query_too_short
+                                    else -> when (state.mode) {
+                                        AddMode.RECENT -> R.string.add_empty_recent
+                                        AddMode.FAVORITES -> R.string.add_empty_favorites
+                                        AddMode.CUSTOM -> R.string.add_empty_custom
+                                        AddMode.SEARCH -> R.string.add_no_results
+                                    }
                                 },
                             ),
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         )
                     }
                 }
-                items(state.foods, key = { it.id }) { food ->
+                items(state.foods, key = { "${it.key.source}-${it.key.ref}" }) { food ->
                     FoodRow(
                         food = food,
-                        energyText = energyText(food.nutrients.kcal, state.energyUnit),
+                        energyText = energyText(food.kcalPer100, state.energyUnit),
                         onClick = { onLogFood(food) },
                         onEdit = { onEditFood(food) },
                     )
@@ -217,10 +250,17 @@ fun AddFoodContent(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun FoodRow(food: CustomFood, energyText: String, onClick: () -> Unit, onEdit: () -> Unit) {
+private fun FoodRow(food: FoodHit, energyText: String, onClick: () -> Unit, onEdit: () -> Unit) {
     val per100 = stringResource(
         if (food.perUnit == PerUnit.MILLILITER) R.string.food_per_100ml else R.string.food_per_100g,
         energyText,
+    )
+    val badge = stringResource(
+        when (food.key.source) {
+            FoodSource.BLS -> R.string.food_source_bls
+            FoodSource.OFF -> R.string.food_source_off
+            else -> R.string.food_source_custom
+        },
     )
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -236,7 +276,7 @@ private fun FoodRow(food: CustomFood, energyText: String, onClick: () -> Unit, o
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(food.name, style = MaterialTheme.typography.bodyLarge)
-                SourceBadge(stringResource(R.string.food_source_custom))
+                SourceBadge(badge)
             }
             val details = listOfNotNull(food.brand?.takeIf { it.isNotBlank() }, per100).joinToString(" · ")
             Text(
@@ -245,11 +285,14 @@ private fun FoodRow(food: CustomFood, energyText: String, onClick: () -> Unit, o
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        IconButton(onClick = onEdit) {
-            Icon(
-                painter = painterResource(R.drawable.ic_edit_24),
-                contentDescription = stringResource(R.string.food_edit_description, food.name),
-            )
+        // Only the user's own foods can be changed.
+        if (food.key.source == FoodSource.CUSTOM) {
+            IconButton(onClick = onEdit) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_edit_24),
+                    contentDescription = stringResource(R.string.food_edit_description, food.name),
+                )
+            }
         }
     }
 }

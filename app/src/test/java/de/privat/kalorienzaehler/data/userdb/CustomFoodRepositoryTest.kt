@@ -6,12 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.cash.turbine.test
 import de.privat.kalorienzaehler.data.repository.RoomCustomFoodRepository
-import de.privat.kalorienzaehler.data.repository.RoomDiaryRepository
 import de.privat.kalorienzaehler.domain.diary.CustomFood
-import de.privat.kalorienzaehler.domain.diary.DiaryEntry
-import de.privat.kalorienzaehler.domain.diary.FoodSource
-import de.privat.kalorienzaehler.domain.diary.Meal
-import de.privat.kalorienzaehler.domain.diary.NutrientAmounts
 import de.privat.kalorienzaehler.domain.diary.NutrientsPer100
 import de.privat.kalorienzaehler.domain.diary.PerUnit
 import java.time.LocalDate
@@ -30,7 +25,6 @@ class CustomFoodRepositoryTest {
 
     private lateinit var database: UserDatabase
     private lateinit var foods: RoomCustomFoodRepository
-    private lateinit var diary: RoomDiaryRepository
 
     private val today = LocalDate.of(2026, 10, 13)
 
@@ -41,7 +35,6 @@ class CustomFoodRepositoryTest {
             .allowMainThreadQueries()
             .build()
         foods = RoomCustomFoodRepository(database.customFoodDao())
-        diary = RoomDiaryRepository(database, database.diaryDao())
     }
 
     @After
@@ -57,24 +50,6 @@ class CustomFoodRepositoryTest {
         createdAtMillis = 1,
         updatedAtMillis = 1,
     )
-
-    private suspend fun log(foodId: Long, date: LocalDate = today, createdAt: Long = 1, source: FoodSource = FoodSource.CUSTOM) {
-        diary.add(
-            DiaryEntry(
-                date = date,
-                meal = Meal.SNACKS,
-                source = source,
-                foodRef = foodId.toString(),
-                name = "x",
-                brand = null,
-                amount = 100.0,
-                unit = "g",
-                grams = 100.0,
-                nutrients = NutrientAmounts(100.0),
-                createdAtMillis = createdAt,
-            ),
-        )
-    }
 
     @Test
     fun aFoodComesBackExactlyAsSaved() = runTest {
@@ -147,60 +122,6 @@ class CustomFoodRepositoryTest {
         val dao = database.customFoodDao()
         assertEquals(id, dao.findByBarcode("4006381333931")?.id)
         assertNull(dao.findByBarcode("4006381333932"))
-    }
-
-    @Test
-    fun recentFoodsAreOrderedByHowOftenTheyWereLogged() = runTest {
-        val a = foods.save(food("A"))
-        val b = foods.save(food("B"))
-        val c = foods.save(food("C"))
-        log(a, createdAt = 10)
-        log(b, createdAt = 20)
-        log(b, createdAt = 30)
-        log(c, createdAt = 40)
-        log(c, createdAt = 50)
-        log(c, createdAt = 60)
-        val recent = foods.observeRecent(since = today.minusDays(30), limit = 10).first()
-        assertEquals(listOf("C", "B", "A"), recent.map { it.name })
-    }
-
-    @Test
-    fun equallyOftenUsedFoodsShowTheMostRecentFirst() = runTest {
-        val a = foods.save(food("A"))
-        val b = foods.save(food("B"))
-        log(a, createdAt = 10)
-        log(b, createdAt = 20)
-        assertEquals(listOf("B", "A"), foods.observeRecent(today.minusDays(30), 10).first().map { it.name })
-    }
-
-    @Test
-    fun recentFoodsIgnoreOldEntriesQuickEntriesAndDeletedFoods() = runTest {
-        val old = foods.save(food("Alt"))
-        val fresh = foods.save(food("Frisch"))
-        val gone = foods.save(food("Gelöscht"))
-        log(old, date = today.minusDays(31))
-        log(fresh, date = today.minusDays(30))
-        log(gone)
-        foods.delete(gone)
-        log(fresh, source = FoodSource.QUICK)
-        val recent = foods.observeRecent(since = today.minusDays(30), limit = 10).first()
-        assertEquals(listOf("Frisch"), recent.map { it.name })
-    }
-
-    @Test
-    fun recentFoodsAreLimited() = runTest {
-        repeat(5) { index -> log(foods.save(food("F$index")), createdAt = index.toLong()) }
-        assertEquals(3, foods.observeRecent(today.minusDays(30), limit = 3).first().size)
-    }
-
-    @Test
-    fun recentFoodsUpdateWhenSomethingIsLogged() = runTest {
-        val a = foods.save(food("A"))
-        foods.observeRecent(today.minusDays(30), 10).test {
-            assertEquals(emptyList<CustomFood>(), awaitItem())
-            log(a)
-            assertEquals(listOf("A"), awaitItem().map { it.name })
-        }
     }
 
     @Test

@@ -6,7 +6,11 @@ import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import de.privat.kalorienzaehler.data.repository.CustomFoodRepository
+import de.privat.kalorienzaehler.data.repository.DefaultFoodCatalog
 import de.privat.kalorienzaehler.data.repository.DiaryRepository
+import de.privat.kalorienzaehler.data.repository.FavoriteRepository
+import de.privat.kalorienzaehler.data.repository.FoodCatalog
+import de.privat.kalorienzaehler.data.repository.FoodRepository
 import de.privat.kalorienzaehler.data.repository.ProfileRepository
 import de.privat.kalorienzaehler.data.repository.WeightRepository
 import de.privat.kalorienzaehler.di.ClockModule
@@ -24,6 +28,13 @@ abstract class TestRepositoryModule {
     @Binds abstract fun bindDiaryRepository(impl: FakeDiaryRepository): DiaryRepository
 
     @Binds abstract fun bindCustomFoodRepository(impl: FakeCustomFoodRepository): CustomFoodRepository
+
+    @Binds abstract fun bindFoodRepository(impl: FakeFoodRepository): FoodRepository
+
+    @Binds abstract fun bindFavoriteRepository(impl: FakeFavoriteRepository): FavoriteRepository
+
+    /** The real catalog (search, ranking) on top of the fakes. */
+    @Binds abstract fun bindFoodCatalog(impl: DefaultFoodCatalog): FoodCatalog
 }
 
 /** A fixed "today" in Hilt tests. */

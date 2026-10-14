@@ -18,12 +18,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.privat.kalorienzaehler.R
 import de.privat.kalorienzaehler.domain.profile.DraftEvaluation
 import de.privat.kalorienzaehler.domain.profile.ProfileDraft
@@ -41,6 +43,7 @@ import androidx.compose.ui.text.input.ImeAction
 @Composable
 fun OnboardingScreen(viewModel: OnboardingViewModel = hiltViewModel()) {
     BackHandler(enabled = viewModel.step != OnboardingStep.WELCOME) { viewModel.back() }
+    val foodDbPreparing by viewModel.foodDbPreparing.collectAsStateWithLifecycle()
     OnboardingContent(
         step = viewModel.step,
         draft = viewModel.draft,
@@ -48,6 +51,7 @@ fun OnboardingScreen(viewModel: OnboardingViewModel = hiltViewModel()) {
         canContinue = viewModel.canContinue,
         isSaving = viewModel.isSaving,
         saveFailed = viewModel.saveFailed,
+        foodDbPreparing = foodDbPreparing,
         edit = viewModel::edit,
         onNext = viewModel::next,
         onBack = { viewModel.back() },
@@ -68,6 +72,7 @@ fun OnboardingContent(
     onBack: () -> Unit,
     onFinish: () -> Unit,
     modifier: Modifier = Modifier,
+    foodDbPreparing: Boolean = false,
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
         Scaffold(
@@ -92,6 +97,9 @@ fun OnboardingContent(
                     .padding(horizontal = 24.dp, vertical = 16.dp),
             ) {
                 StepContent(step, draft, evaluation, saveFailed, edit)
+                if (foodDbPreparing && (step == OnboardingStep.WELCOME || step == OnboardingStep.SUMMARY)) {
+                    HintText(stringResource(R.string.onboarding_food_db_preparing))
+                }
             }
         }
     }

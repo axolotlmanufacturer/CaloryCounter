@@ -5,6 +5,8 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -19,17 +21,23 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import de.privat.kalorienzaehler.MainActivity
+import de.privat.kalorienzaehler.data.fooddb.FoodDbStatus
 import de.privat.kalorienzaehler.R
+import de.privat.kalorienzaehler.domain.diary.FoodPortion
 import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.domain.diary.Meal
 import de.privat.kalorienzaehler.domain.diary.NutrientAmounts
 import de.privat.kalorienzaehler.domain.weight.WeightPoint
 import de.privat.kalorienzaehler.testing.FakeCustomFoodRepository
 import de.privat.kalorienzaehler.testing.FakeDiaryRepository
+import de.privat.kalorienzaehler.testing.FakeFavoriteRepository
+import de.privat.kalorienzaehler.testing.FakeFoodRepository
 import de.privat.kalorienzaehler.testing.FakeProfileRepository
 import de.privat.kalorienzaehler.testing.FakeWeightRepository
 import de.privat.kalorienzaehler.testing.TEST_TODAY
 import de.privat.kalorienzaehler.testing.sampleProfile
+import de.privat.kalorienzaehler.testing.testBls
+import de.privat.kalorienzaehler.testing.testOff
 import de.privat.kalorienzaehler.testing.string
 import de.privat.kalorienzaehler.testing.testEntry
 import de.privat.kalorienzaehler.testing.testFood
@@ -63,6 +71,10 @@ class DiaryFlowTest {
 
     @Inject lateinit var foods: FakeCustomFoodRepository
 
+    @Inject lateinit var database: FakeFoodRepository
+
+    @Inject lateinit var favorites: FakeFavoriteRepository
+
     @Before
     fun setUp() {
         hilt.inject()
@@ -76,6 +88,11 @@ class DiaryFlowTest {
 
     private fun addTo(meal: Int) =
         compose.onNodeWithContentDescription(text(R.string.today_add_to_meal, text(meal))).performClick()
+
+    /** The search starts after a short pause in typing: wait until [name] is listed. */
+    private fun waitForFood(name: String) {
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodesWithText(name).fetchSemanticsNodes().isNotEmpty() }
+    }
 
     private fun pressBack() {
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
@@ -152,8 +169,87 @@ class DiaryFlowTest {
         foods.preset(testFood(name = "Käsebrot", brand = null), testFood(name = "Apfelmus", brand = null))
         addTo(R.string.meal_breakfast)
         compose.onNodeWithText(text(R.string.add_search_label)).performTextInput("kaese")
+        waitForFood("Käsebrot")
         compose.onNodeWithText("Käsebrot").assertIsDisplayed()
         compose.onNodeWithText("Apfelmus").assertDoesNotExist()
+    }
+
+    @Test
+    fun aDatabaseFoodIsFoundAndLoggedWithAnEstimatedPortion() {
+        val apple = testBls("F110100", "Apfel roh", kcal = 58.0)
+        database.preset(apple, testOff("4000540000108", "Haferflocken", "Kölln", kcal = 361.0))
+        database.presetPortions(apple, FoodPortion("Stück (mittel)", 150.0, estimated = true))
+        addTo(R.string.meal_lunch)
+        compose.onNodeWithText(text(R.string.add_search_label)).performTextInput("apfel")
+        waitForFood("Apfel roh")
+        compose.onNodeWithText(text(R.string.food_source_bls)).assertIsDisplayed()
+        compose.onNodeWithText("Haferflocken").assertDoesNotExist()
+        compose.onNodeWithText("Apfel roh").performClick()
+
+        // The amount screen offers g and the estimated portion, marked as an estimate.
+        compose.onNodeWithText(text(R.string.portion_title)).assertIsDisplayed()
+        val portionChip = text(R.string.portion_unit_label_estimated, "Stück (mittel)", text(R.string.unit_g_value, "150"))
+        compose.onNodeWithText(portionChip).performClick()
+        compose.onNodeWithText(text(R.string.portion_estimated_hint)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.portion_amount)).performTextReplacement("2")
+        compose.onNodeWithText(text(R.string.portion_add)).performClick()
+
+        tab(R.string.nav_today).assertIsSelected()
+        val entry = diary.stored.single()
+        assertEquals(FoodSource.BLS, entry.source)
+        assertEquals("F110100", entry.foodRef)
+        assertEquals("Stück (mittel)", entry.unit)
+        assertEquals(300.0, entry.grams, 1e-9)
+        assertEquals(174.0, entry.nutrients.kcal, 1e-9)
+        assertEquals(Meal.MITTAGESSEN, entry.meal)
+    }
+
+    @Test
+    fun anOpenFoodFactsFoodShowsItsBrandAndBadge() {
+        database.preset(testOff("4000540000108", "Haferflocken", "Kölln", kcal = 361.0))
+        addTo(R.string.meal_breakfast)
+        compose.onNodeWithText(text(R.string.add_search_label)).performTextInput("hafer")
+        waitForFood("Haferflocken")
+        compose.onNodeWithText(text(R.string.food_source_off)).assertIsDisplayed()
+        compose.onNodeWithText("Kölln", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun aFoodStarredOnTheAmountScreenAppearsUnderFavoriten() {
+        val gouda = testBls("M402600", "Gouda 48 % Fett i. Tr.", kcal = 379.0)
+        database.preset(gouda)
+        addTo(R.string.meal_dinner)
+        compose.onNodeWithText(text(R.string.add_search_label)).performTextInput("gouda")
+        waitForFood("Gouda 48 % Fett i. Tr.")
+        compose.onNodeWithText("Gouda 48 % Fett i. Tr.").performClick()
+        compose.onNodeWithContentDescription(text(R.string.favorite_add)).performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithContentDescription(text(R.string.favorite_remove)).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertEquals(setOf(gouda.key), favorites.stored)
+
+        pressBack() // back to the add screen; the search is still there, the chip switches to Favoriten
+        compose.onNodeWithText(text(R.string.add_chip_favorites)).performClick()
+        compose.onNodeWithText("Gouda 48 % Fett i. Tr.").assertIsDisplayed()
+    }
+
+    @Test
+    fun whileTheDatabaseIsPreparedTheOwnFoodsStillAppearAndAHintIsShown() {
+        database.setStatus(FoodDbStatus.Preparing)
+        foods.preset(testFood(name = "Käsebrot", brand = null))
+        addTo(R.string.meal_breakfast)
+        compose.onNodeWithText(text(R.string.add_search_label)).performTextInput("kaese")
+        waitForFood("Käsebrot")
+        compose.onNodeWithText(text(R.string.add_db_preparing)).assertIsDisplayed()
+        database.setStatus(FoodDbStatus.Ready)
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodesWithText(text(R.string.add_db_preparing)).fetchSemanticsNodes().isEmpty() }
+    }
+
+    @Test
+    fun anUnreadableDatabaseIsExplained() {
+        database.setStatus(FoodDbStatus.Failed)
+        addTo(R.string.meal_breakfast)
+        compose.onNodeWithText(text(R.string.add_db_failed)).assertIsDisplayed()
     }
 
     @Test

@@ -7,6 +7,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.privat.kalorienzaehler.data.fooddb.FoodDbStatus
+import de.privat.kalorienzaehler.data.repository.FoodRepository
 import de.privat.kalorienzaehler.data.repository.ProfileRepository
 import de.privat.kalorienzaehler.data.repository.WeightRepository
 import de.privat.kalorienzaehler.domain.profile.DraftEvaluation
@@ -16,6 +18,10 @@ import java.time.Clock
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** The six onboarding steps (PROMPT.md §7.1), in order. */
@@ -55,8 +61,14 @@ enum class OnboardingStep {
 class OnboardingViewModel @Inject constructor(
     private val profileRepository: ProfileRepository,
     private val weightRepository: WeightRepository,
+    foodRepository: FoodRepository,
     private val clock: Clock,
 ) : ViewModel() {
+
+    /** True while the bundled food database is still being unpacked (PROMPT.md §7.1). */
+    val foodDbPreparing: StateFlow<Boolean> = foodRepository.status
+        .map { it == FoodDbStatus.Preparing }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), foodRepository.status.value == FoodDbStatus.Preparing)
 
     var step by mutableStateOf(OnboardingStep.WELCOME)
         private set

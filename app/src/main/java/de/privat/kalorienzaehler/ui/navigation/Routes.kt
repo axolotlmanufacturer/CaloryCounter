@@ -1,6 +1,7 @@
 package de.privat.kalorienzaehler.ui.navigation
 
 import androidx.navigation3.runtime.NavKey
+import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.domain.diary.Meal
 import kotlinx.serialization.Serializable
 
@@ -33,9 +34,9 @@ data class PortionRoute(val target: PortionTarget) : NavKey
 
 @Serializable
 sealed interface PortionTarget {
-    /** Log [customFoodId] to [meal] on the day [epochDay]. */
+    /** Log the food [ref] of [source] (BLS code, barcode or custom food id) to [meal] on the day [epochDay]. */
     @Serializable
-    data class NewFromCustomFood(val customFoodId: Long, val epochDay: Long, val meal: Meal) : PortionTarget
+    data class NewFromFood(val source: FoodSource, val ref: String, val epochDay: Long, val meal: Meal) : PortionTarget
 
     /** Change the amount or meal of the logged entry [entryId]. */
     @Serializable

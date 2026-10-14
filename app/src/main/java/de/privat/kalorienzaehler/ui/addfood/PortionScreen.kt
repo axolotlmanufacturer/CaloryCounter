@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -15,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -26,7 +29,9 @@ import de.privat.kalorienzaehler.domain.diary.AmountUnit
 import de.privat.kalorienzaehler.domain.diary.FormError
 import de.privat.kalorienzaehler.domain.diary.Meal
 import de.privat.kalorienzaehler.domain.diary.NutrientAmounts
+import de.privat.kalorienzaehler.domain.diary.PerUnit
 import de.privat.kalorienzaehler.domain.energy.EnergyUnit
+import de.privat.kalorienzaehler.domain.format.GermanFormat
 import de.privat.kalorienzaehler.ui.diary.BottomActionBar
 import de.privat.kalorienzaehler.ui.diary.FullScreenScaffold
 import de.privat.kalorienzaehler.ui.diary.MealChoice
@@ -39,7 +44,7 @@ import de.privat.kalorienzaehler.ui.navigation.PortionRoute
 import de.privat.kalorienzaehler.ui.profile.DecimalField
 import de.privat.kalorienzaehler.ui.profile.HintText
 import de.privat.kalorienzaehler.ui.profile.SectionTitle
-import de.privat.kalorienzaehler.ui.profile.SegmentedChoice
+import de.privat.kalorienzaehler.ui.profile.ChipChoice
 import de.privat.kalorienzaehler.ui.profile.energyText
 
 @Composable
@@ -74,11 +79,13 @@ fun PortionScreen(
         meal = viewModel.meal,
         energyUnit = viewModel.energyUnit,
         preview = viewModel.preview,
+        isFavorite = viewModel.isFavorite,
         canSave = viewModel.canSave,
         snackbarHostState = snackbarHostState,
         onAmountChange = viewModel::onAmountChange,
         onSelectUnit = viewModel::selectUnit,
         onSelectMeal = viewModel::selectMeal,
+        onToggleFavorite = viewModel::toggleFavorite,
         onSave = viewModel::save,
         onBack = onBack,
         modifier = modifier,
@@ -98,11 +105,13 @@ fun PortionContent(
     meal: Meal,
     energyUnit: EnergyUnit,
     preview: NutrientAmounts?,
+    isFavorite: Boolean?,
     canSave: Boolean,
     snackbarHostState: SnackbarHostState,
     onAmountChange: (String) -> Unit,
     onSelectUnit: (Int) -> Unit,
     onSelectMeal: (Meal) -> Unit,
+    onToggleFavorite: () -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -111,6 +120,17 @@ fun PortionContent(
         title = stringResource(if (isEditing) R.string.portion_title_edit else R.string.portion_title),
         subtitle = subtitle,
         onBack = onBack,
+        actions = {
+            if (isFavorite != null) {
+                IconButton(onClick = onToggleFavorite) {
+                    Icon(
+                        painter = painterResource(if (isFavorite) R.drawable.ic_star_filled_24 else R.drawable.ic_star_24),
+                        contentDescription = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             BottomActionBar {
@@ -155,15 +175,17 @@ fun PortionContent(
                 suffix = singleUnit?.let { unitSuffix(it) },
             )
             if (subject.units.size > 1) {
-                SegmentedChoice(
+                ChipChoice(
                     options = subject.units.indices.toList(),
                     selected = unitIndex,
-                    label = { index -> subject.units[index].key },
+                    label = { index -> unitLabel(subject.units[index], subject.perUnit) },
                     onSelect = onSelectUnit,
                 )
             }
+            val approximate = subject.units.getOrNull(unitIndex)?.estimated == true
+            if (approximate) HintText(stringResource(R.string.portion_estimated_hint))
 
-            PreviewCard(preview = preview, energyUnit = energyUnit)
+            PreviewCard(preview = preview, energyUnit = energyUnit, approximate = approximate)
 
             SectionTitle(stringResource(R.string.field_meal))
             MealChoice(selected = meal, onSelect = onSelectMeal)
@@ -179,11 +201,32 @@ fun PortionContent(
     }
 }
 
-/** The unit shown inside the amount field; portion labels such as "Portion (30 g)" are shown whole. */
+/** The unit shown inside the amount field when it is the only one. */
 private fun unitSuffix(unit: AmountUnit): String = unit.key
 
+/** g and ml as they are; a typical portion with its weight: "Stück (mittel) ≈ ca. 150 g". */
 @Composable
-private fun PreviewCard(preview: NutrientAmounts?, energyUnit: EnergyUnit, modifier: Modifier = Modifier) {
+private fun unitLabel(unit: AmountUnit, perUnit: PerUnit): String = when {
+    unit.isBase -> unit.key
+    // The pack's own portion already names its size: "Portion (30 g)".
+    unit.key.startsWith(AmountUnit.PORTION) && !unit.estimated -> unit.key
+    else -> stringResource(
+        if (unit.estimated) R.string.portion_unit_label_estimated else R.string.portion_unit_label,
+        unit.key,
+        stringResource(
+            if (perUnit == PerUnit.MILLILITER) R.string.unit_ml_value else R.string.unit_g_value,
+            GermanFormat.upTo(unit.gramsPerUnit, 1),
+        ),
+    )
+}
+
+@Composable
+private fun PreviewCard(
+    preview: NutrientAmounts?,
+    energyUnit: EnergyUnit,
+    approximate: Boolean,
+    modifier: Modifier = Modifier,
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = modifier.fillMaxWidth(),
@@ -195,17 +238,19 @@ private fun PreviewCard(preview: NutrientAmounts?, energyUnit: EnergyUnit, modif
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.semantics { heading() },
             )
+            val energy = if (preview == null) stringResource(R.string.value_missing) else energyText(preview.kcal, energyUnit)
+            val macros = stringResource(
+                R.string.plan_macros_values,
+                gramsOrMissing(preview?.protein),
+                gramsOrMissing(preview?.carbs),
+                gramsOrMissing(preview?.fat),
+            )
             Text(
-                text = if (preview == null) stringResource(R.string.value_missing) else energyText(preview.kcal, energyUnit),
+                text = if (approximate && preview != null) stringResource(R.string.portion_approx, energy) else energy,
                 style = MaterialTheme.typography.headlineMedium,
             )
             Text(
-                text = stringResource(
-                    R.string.plan_macros_values,
-                    gramsOrMissing(preview?.protein),
-                    gramsOrMissing(preview?.carbs),
-                    gramsOrMissing(preview?.fat),
-                ),
+                text = if (approximate && preview != null) stringResource(R.string.portion_approx, macros) else macros,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -6,10 +6,16 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.privat.kalorienzaehler.data.prefs.DataStoreProfileRepository
 import de.privat.kalorienzaehler.data.repository.CustomFoodRepository
+import de.privat.kalorienzaehler.data.repository.DefaultFoodCatalog
 import de.privat.kalorienzaehler.data.repository.DiaryRepository
+import de.privat.kalorienzaehler.data.repository.FavoriteRepository
+import de.privat.kalorienzaehler.data.repository.FoodCatalog
+import de.privat.kalorienzaehler.data.repository.FoodRepository
 import de.privat.kalorienzaehler.data.repository.ProfileRepository
 import de.privat.kalorienzaehler.data.repository.RoomCustomFoodRepository
 import de.privat.kalorienzaehler.data.repository.RoomDiaryRepository
+import de.privat.kalorienzaehler.data.repository.RoomFavoriteRepository
+import de.privat.kalorienzaehler.data.repository.RoomFoodRepository
 import de.privat.kalorienzaehler.data.repository.RoomWeightRepository
 import de.privat.kalorienzaehler.data.repository.WeightRepository
 import javax.inject.Singleton
@@ -33,4 +39,16 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCustomFoodRepository(impl: RoomCustomFoodRepository): CustomFoodRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFoodRepository(impl: RoomFoodRepository): FoodRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFavoriteRepository(impl: RoomFavoriteRepository): FavoriteRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFoodCatalog(impl: DefaultFoodCatalog): FoodCatalog
 }

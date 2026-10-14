@@ -1,6 +1,7 @@
 package de.privat.kalorienzaehler.data.repository
 
 import de.privat.kalorienzaehler.domain.diary.DiaryEntry
+import de.privat.kalorienzaehler.domain.diary.FoodKey
 import de.privat.kalorienzaehler.domain.diary.Meal
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
@@ -12,6 +13,9 @@ interface DiaryRepository {
     fun observeDay(date: LocalDate): Flow<List<DiaryEntry>>
 
     suspend fun get(id: Long): DiaryEntry?
+
+    /** The foods logged since [since], the most often logged first. */
+    fun observeRecentFoods(since: LocalDate, limit: Int): Flow<List<FoodKey>>
 
     /** Stores a new entry and returns its id. */
     suspend fun add(entry: DiaryEntry): Long

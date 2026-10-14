@@ -6,6 +6,7 @@ import de.privat.kalorienzaehler.data.userdb.UserDatabase
 import de.privat.kalorienzaehler.data.userdb.toDomain
 import de.privat.kalorienzaehler.data.userdb.toEntity
 import de.privat.kalorienzaehler.domain.diary.DiaryEntry
+import de.privat.kalorienzaehler.domain.diary.FoodKey
 import de.privat.kalorienzaehler.domain.diary.Meal
 import java.time.LocalDate
 import javax.inject.Inject
@@ -21,6 +22,9 @@ class RoomDiaryRepository @Inject constructor(
         dao.observeDay(date).map { entries -> entries.map { it.toDomain() } }
 
     override suspend fun get(id: Long): DiaryEntry? = dao.get(id)?.toDomain()
+
+    override fun observeRecentFoods(since: LocalDate, limit: Int): Flow<List<FoodKey>> =
+        dao.observeRecentFoods(since, limit).map { rows -> rows.map { FoodKey(it.source, it.ref) } }
 
     override suspend fun add(entry: DiaryEntry): Long = dao.insert(entry.toEntity())
 

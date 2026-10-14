@@ -3,13 +3,19 @@ package de.privat.kalorienzaehler
 import android.app.Application
 import android.os.StrictMode
 import dagger.hilt.android.HiltAndroidApp
+import de.privat.kalorienzaehler.data.repository.FoodRepository
+import javax.inject.Inject
 
 @HiltAndroidApp
 class KalorienzaehlerApp : Application() {
 
+    @Inject lateinit var foodRepository: FoodRepository
+
     override fun onCreate() {
         super.onCreate()
         if (BuildConfig.DEBUG) enableStrictMode()
+        // The first start copies the food database out of the app package: do it in the background, during onboarding.
+        foodRepository.prepare()
     }
 
     /**

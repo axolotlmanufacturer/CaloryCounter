@@ -1,15 +1,19 @@
 package de.privat.kalorienzaehler.ui.onboarding
 
+import app.cash.turbine.test
+import de.privat.kalorienzaehler.data.fooddb.FoodDbStatus
 import de.privat.kalorienzaehler.domain.model.ActivityLevel
 import de.privat.kalorienzaehler.domain.model.Goal
 import de.privat.kalorienzaehler.domain.model.GoalType
 import de.privat.kalorienzaehler.domain.model.Sex
 import de.privat.kalorienzaehler.domain.weight.WeightPoint
+import de.privat.kalorienzaehler.testing.FakeFoodRepository
 import de.privat.kalorienzaehler.testing.FakeProfileRepository
 import de.privat.kalorienzaehler.testing.FakeWeightRepository
 import de.privat.kalorienzaehler.testing.MainDispatcherRule
 import de.privat.kalorienzaehler.testing.TEST_CLOCK
 import de.privat.kalorienzaehler.testing.TEST_TODAY
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -25,10 +29,28 @@ class OnboardingViewModelTest {
 
     private val profiles = FakeProfileRepository()
     private val weights = FakeWeightRepository()
-    private fun viewModel() = OnboardingViewModel(profiles, weights, TEST_CLOCK)
+    private val foodDb = FakeFoodRepository()
+    private fun viewModel() = OnboardingViewModel(profiles, weights, foodDb, TEST_CLOCK)
 
     private fun OnboardingViewModel.answerEverything() {
         edit { it.copy(sex = Sex.MALE, birthDate = "13.09.1996", heightCm = "180", weightKg = "80", activity = ActivityLevel.MODERATE) }
+    }
+
+    @Test
+    fun reportsWhileTheFoodDatabaseIsStillBeingPrepared() = runTest {
+        foodDb.setStatus(FoodDbStatus.Preparing)
+        val viewModel = viewModel()
+        viewModel.foodDbPreparing.test {
+            assertTrue(awaitItem())
+            foodDb.setStatus(FoodDbStatus.Ready)
+            assertFalse(awaitItem())
+        }
+    }
+
+    @Test
+    fun aFailedFoodDatabaseIsNotReportedAsPreparing() = runTest {
+        foodDb.setStatus(FoodDbStatus.Failed)
+        viewModel().foodDbPreparing.test { assertFalse(awaitItem()) }
     }
 
     @Test

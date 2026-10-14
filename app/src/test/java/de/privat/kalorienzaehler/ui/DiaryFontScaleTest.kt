@@ -6,9 +6,14 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import de.privat.kalorienzaehler.data.fooddb.FoodDbStatus
 import de.privat.kalorienzaehler.domain.diary.CustomFoodDraft
 import de.privat.kalorienzaehler.domain.diary.DiaryEntry
+import de.privat.kalorienzaehler.domain.diary.FoodHit
+import de.privat.kalorienzaehler.domain.diary.FoodKey
+import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.domain.diary.Meal
 import de.privat.kalorienzaehler.domain.diary.NutrientAmounts
 import de.privat.kalorienzaehler.domain.diary.PerUnit
@@ -142,19 +147,14 @@ class DiaryFontScaleTest {
         assertNothingClipped("Heute over target")
     }
 
-    @Test
-    fun theAddScreenFits() {
-        val foods = listOf(
-            testFood(id = 1, name = "Haferflocken zart mit Vollkorn", brand = "Kölln Müsli Manufaktur"),
-            testFood(id = 2, name = "Apfelmus", brand = null),
-        )
+    private fun addScreen(state: AddFoodState, query: String = "") {
         compose.setContent {
             KalorienzaehlerTheme(dynamicColor = false) {
                 AddFoodContent(
                     subtitle = "Frühstück · Heute",
-                    query = "",
+                    query = query,
                     onQueryChange = {},
-                    state = AddFoodState(AddMode.CUSTOM, foods, EnergyUnit.KCAL),
+                    state = state,
                     onSelectFilter = {},
                     onBack = {},
                     onQuickEntry = {},
@@ -164,6 +164,19 @@ class DiaryFontScaleTest {
                 )
             }
         }
+    }
+
+    private fun hit(source: FoodSource, ref: String, name: String, brand: String?, kcal: Double = 372.0, perUnit: PerUnit = PerUnit.GRAM) =
+        FoodHit(FoodKey(source, ref), name, brand, kcal, perUnit)
+
+    @Test
+    fun theAddScreenFits() {
+        val foods = listOf(
+            hit(FoodSource.CUSTOM, "1", "Haferflocken zart mit Vollkorn", "Kölln Müsli Manufaktur"),
+            hit(FoodSource.BLS, "M110100", "Käse, Gouda, mindestens 48 % Fett i. Tr., Vollfettstufe", null),
+            hit(FoodSource.OFF, "4008400154329", "Bio Haferdrink ohne Zuckerzusatz", "Alnatura Naturkost", 42.0, PerUnit.MILLILITER),
+        )
+        addScreen(AddFoodState(AddMode.SEARCH, foods, EnergyUnit.KCAL, FoodDbStatus.Ready), query = "hafer")
         assertNothingClipped("Lebensmittel hinzufügen")
         foods.forEach { food ->
             compose.scrollListTo(food.name)
@@ -172,25 +185,41 @@ class DiaryFontScaleTest {
     }
 
     @Test
+    fun theAddScreenFitsInKilojoules() {
+        val foods = listOf(hit(FoodSource.OFF, "4008400154329", "Bio Haferdrink ohne Zuckerzusatz", "Alnatura Naturkost", 42.0))
+        addScreen(AddFoodState(AddMode.FAVORITES, foods, EnergyUnit.KJ, FoodDbStatus.Ready))
+        assertNothingClipped("Lebensmittel hinzufügen (kJ)")
+    }
+
+    @Test
     fun theEmptyAddScreenFits() {
-        compose.setContent {
-            KalorienzaehlerTheme(dynamicColor = false) {
-                AddFoodContent(
-                    subtitle = "Frühstück · Heute",
-                    query = "",
-                    onQueryChange = {},
-                    state = AddFoodState(AddMode.RECENT, emptyList(), EnergyUnit.KCAL),
-                    onSelectFilter = {},
-                    onBack = {},
-                    onQuickEntry = {},
-                    onCreateCustom = {},
-                    onLogFood = {},
-                    onEditFood = {},
-                )
-            }
-        }
+        addScreen(AddFoodState(AddMode.RECENT, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Ready))
         assertNothingClipped("empty Lebensmittel hinzufügen")
-        assertEquals(AddFilter.RECENT, AddFoodState(AddMode.RECENT, emptyList(), EnergyUnit.KCAL).selectedFilter)
+        assertEquals(AddFilter.RECENT, AddFoodState(AddMode.RECENT, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Ready).selectedFilter)
+    }
+
+    @Test
+    fun theEmptyFavoritesHintFits() {
+        addScreen(AddFoodState(AddMode.FAVORITES, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Ready))
+        assertNothingClipped("empty Favoriten")
+    }
+
+    @Test
+    fun thePreparingDatabaseHintFits() {
+        addScreen(AddFoodState(AddMode.SEARCH, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Preparing), query = "hafer")
+        assertNothingClipped("Datenbank wird vorbereitet")
+    }
+
+    @Test
+    fun theFailedDatabaseHintFits() {
+        addScreen(AddFoodState(AddMode.SEARCH, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Failed), query = "hafer")
+        assertNothingClipped("Datenbank nicht verfügbar")
+    }
+
+    @Test
+    fun theTooShortSearchHintAndNoResultsFit() {
+        addScreen(AddFoodState(AddMode.SEARCH, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Ready, queryTooShort = true), query = "h")
+        assertNothingClipped("Suche zu kurz")
     }
 
     @Test
@@ -252,17 +281,14 @@ class DiaryFontScaleTest {
         assertNothingClipped("Eigenes Lebensmittel (with errors and warnings)")
     }
 
-    @Test
-    fun theAmountScreenFits() {
-        val food = testFood(id = 1, name = "Haferflocken zart mit Vollkorn", brand = "Kölln Müsli Manufaktur", servingG = 40.0)
-        val subject = PortionSubject(
-            name = food.name,
-            brand = food.brand,
-            perUnit = food.perUnit,
-            per100 = food.nutrients,
-            units = AmountUnit.forFood(food.perUnit, food.servingG),
-            showTable = true,
-        )
+    private fun amountScreen(
+        subject: PortionSubject,
+        unitIndex: Int,
+        amountText: String,
+        grams: Double,
+        isFavorite: Boolean? = false,
+        energyUnit: EnergyUnit = EnergyUnit.KCAL,
+    ) {
         compose.setContent {
             KalorienzaehlerTheme(dynamicColor = false) {
                 PortionContent(
@@ -271,22 +297,80 @@ class DiaryFontScaleTest {
                     notFound = false,
                     subtitle = "Frühstück · Heute",
                     subject = subject,
-                    amountText = "1",
+                    amountText = amountText,
                     amountError = null,
-                    unitIndex = 1,
+                    unitIndex = unitIndex,
                     meal = Meal.FRUEHSTUECK,
-                    energyUnit = EnergyUnit.KCAL,
-                    preview = food.nutrients.forGrams(40.0),
+                    energyUnit = energyUnit,
+                    preview = subject.per100.forGrams(grams),
+                    isFavorite = isFavorite,
                     canSave = true,
                     snackbarHostState = snackbar,
                     onAmountChange = {},
                     onSelectUnit = {},
                     onSelectMeal = {},
+                    onToggleFavorite = {},
                     onSave = {},
                     onBack = {},
                 )
             }
         }
+    }
+
+    @Test
+    fun theAmountScreenFits() {
+        val food = testFood(id = 1, name = "Haferflocken zart mit Vollkorn", brand = "Kölln Müsli Manufaktur", servingG = 40.0)
+        val subject = PortionSubject(
+            key = FoodKey(FoodSource.CUSTOM, "1"),
+            name = food.name,
+            brand = food.brand,
+            perUnit = food.perUnit,
+            per100 = food.nutrients,
+            units = AmountUnit.forFood(food.perUnit, food.servingG),
+            showTable = true,
+        )
+        amountScreen(subject, unitIndex = 1, amountText = "1", grams = 40.0)
         assertNothingClipped("Menge wählen")
+    }
+
+    @Test
+    fun theAmountScreenWithEstimatedPortionsFits() {
+        val food = testFood(id = 1, name = "Apfel, roh, mit Schale und Kerngehäuse", brand = null)
+        val subject = PortionSubject(
+            key = FoodKey(FoodSource.BLS, "F100000"),
+            name = food.name,
+            brand = null,
+            perUnit = PerUnit.GRAM,
+            per100 = food.nutrients,
+            units = listOf(
+                AmountUnit("g", 1.0),
+                AmountUnit("Stück (mittel)", 150.0, estimated = true),
+                AmountUnit("Stück (klein)", 100.0, estimated = true),
+                AmountUnit("Scheibe", 20.0),
+            ),
+            showTable = true,
+        )
+        amountScreen(subject, unitIndex = 1, amountText = "2", grams = 300.0, isFavorite = true, energyUnit = EnergyUnit.KJ)
+        assertNothingClipped("Menge wählen (geschätzte Portion, Favorit)")
+        compose.onNodeWithContentDescription(string(R.string.favorite_remove)).assertIsDisplayed()
+        compose.onNodeWithText(string(R.string.portion_estimated_hint)).performScrollTo().assertIsDisplayed()
+        assertNothingClipped("Menge wählen (Schätzwert-Hinweis)")
+    }
+
+    @Test
+    fun theAmountScreenForAnEntryWithoutAFoodHasNoStar() {
+        val food = testFood(id = 1)
+        val subject = PortionSubject(
+            key = null,
+            name = "Schnelleintrag",
+            brand = null,
+            perUnit = PerUnit.GRAM,
+            per100 = food.nutrients,
+            units = listOf(AmountUnit("g", 1.0)),
+            showTable = false,
+        )
+        amountScreen(subject, unitIndex = 0, amountText = "100", grams = 100.0, isFavorite = null)
+        compose.onNodeWithContentDescription(string(R.string.favorite_add)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(string(R.string.favorite_remove)).assertDoesNotExist()
     }
 }

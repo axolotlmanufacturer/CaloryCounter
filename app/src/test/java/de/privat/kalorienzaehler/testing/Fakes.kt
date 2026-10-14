@@ -1,11 +1,18 @@
 package de.privat.kalorienzaehler.testing
 
+import de.privat.kalorienzaehler.data.fooddb.FoodDbStatus
 import de.privat.kalorienzaehler.data.repository.CustomFoodRepository
 import de.privat.kalorienzaehler.data.repository.DiaryRepository
+import de.privat.kalorienzaehler.data.repository.FavoriteRepository
+import de.privat.kalorienzaehler.data.repository.FoodRepository
 import de.privat.kalorienzaehler.data.repository.ProfileRepository
 import de.privat.kalorienzaehler.data.repository.WeightRepository
 import de.privat.kalorienzaehler.domain.diary.CustomFood
 import de.privat.kalorienzaehler.domain.diary.DiaryEntry
+import de.privat.kalorienzaehler.domain.diary.Food
+import de.privat.kalorienzaehler.domain.diary.FoodKey
+import de.privat.kalorienzaehler.domain.diary.FoodPortion
+import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.domain.diary.Meal
 import de.privat.kalorienzaehler.domain.model.UserProfile
 import de.privat.kalorienzaehler.domain.text.TextNormalizer
@@ -19,6 +26,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 
 /** The "today" of all UI tests: Tuesday, 13 October 2026. */
@@ -103,6 +111,21 @@ class FakeDiaryRepository @Inject constructor() : DiaryRepository {
     override fun observeDay(date: LocalDate): Flow<List<DiaryEntry>> =
         entries.map { all -> all.values.filter { it.date == date }.sortedWith(ORDER) }
 
+    /** Like the real query: foods (no quick entries) logged since [since], the most often logged first. */
+    override fun observeRecentFoods(since: LocalDate, limit: Int): Flow<List<FoodKey>> = entries.map { all ->
+        all.values
+            .filter { it.source != FoodSource.QUICK && it.foodRef != null && !it.date.isBefore(since) }
+            .groupBy { FoodKey(it.source, it.foodRef!!) }
+            .entries
+            .sortedWith(
+                compareByDescending<Map.Entry<FoodKey, List<DiaryEntry>>> { it.value.size }
+                    .thenByDescending { row -> row.value.maxOf { it.createdAtMillis } }
+                    .thenByDescending { row -> row.value.maxOf { it.id } },
+            )
+            .take(limit)
+            .map { it.key }
+    }
+
     override suspend fun get(id: Long): DiaryEntry? = entries.value[id]
 
     override suspend fun add(entry: DiaryEntry): Long {
@@ -153,7 +176,6 @@ class FakeDiaryRepository @Inject constructor() : DiaryRepository {
 class FakeCustomFoodRepository @Inject constructor() : CustomFoodRepository {
 
     private val foods = MutableStateFlow<Map<Long, CustomFood>>(emptyMap())
-    private val recentIds = MutableStateFlow<List<Long>>(emptyList())
     private var nextId = 1L
     var failWrites = false
 
@@ -166,16 +188,8 @@ class FakeCustomFoodRepository @Inject constructor() : CustomFoodRepository {
         withId
     }
 
-    /** What "Zuletzt" shows: these foods, in this order. */
-    fun presetRecent(vararg ids: Long) {
-        recentIds.value = ids.toList()
-    }
-
     override fun observeAll(): Flow<List<CustomFood>> =
         foods.map { all -> all.values.sortedWith(compareBy({ TextNormalizer.normalize(it.name) }, { it.id })) }
-
-    override fun observeRecent(since: LocalDate, limit: Int): Flow<List<CustomFood>> =
-        kotlinx.coroutines.flow.combine(foods, recentIds) { all, ids -> ids.mapNotNull(all::get).take(limit) }
 
     override suspend fun get(id: Long): CustomFood? = foods.value[id]
 
@@ -192,5 +206,96 @@ class FakeCustomFoodRepository @Inject constructor() : CustomFoodRepository {
 
     override suspend fun deleteEverything() {
         foods.value = emptyMap()
+    }
+}
+
+/** The bundled food database as a list in memory; [status] can be set to test "preparing" and "failed". */
+@Singleton
+class FakeFoodRepository @Inject constructor() : FoodRepository {
+
+    private val mutableStatus = MutableStateFlow<FoodDbStatus>(FoodDbStatus.Ready)
+    private val foods = mutableListOf<Food>()
+    private val portionsByFood = mutableMapOf<String, List<FoodPortion>>()
+    var prepareCalls = 0
+        private set
+
+    /** How many full-text searches ran (to test the debounce). */
+    var searchCalls = 0
+        private set
+
+    override val status: StateFlow<FoodDbStatus> = mutableStatus
+
+    fun setStatus(status: FoodDbStatus) {
+        mutableStatus.value = status
+    }
+
+    /** Adds foods in relevance order (like the real database, `id` is the relevance within a source). */
+    fun preset(vararg presets: Food) {
+        foods += presets
+    }
+
+    fun presetPortions(food: Food, vararg portions: FoodPortion) {
+        portionsByFood["${food.key.source}:${food.key.ref}"] = portions.toList()
+    }
+
+    override fun prepare() {
+        prepareCalls++
+    }
+
+    override suspend fun searchBls(match: String, prefix: String, limit: Int): List<Food> =
+        search(FoodSource.BLS, match, limit)
+
+    override suspend fun searchOff(match: String, limit: Int): List<Food> =
+        search(FoodSource.OFF, match, limit).sortedByDescending { it.popularity }
+
+    private fun search(source: FoodSource, match: String, limit: Int): List<Food> {
+        if (source == FoodSource.BLS) searchCalls++
+        if (mutableStatus.value != FoodDbStatus.Ready) return emptyList()
+        // "kase* gouda*": every word must start a word of the name or brand.
+        val prefixes = match.split(' ').filter { it.isNotBlank() }.map { it.removeSuffix("*") }
+        return foods
+            .filter { it.key.source == source }
+            .filter { food ->
+                val words = TextNormalizer.normalize("${food.name} ${food.brand.orEmpty()}").split(' ')
+                prefixes.all { prefix -> words.any { it.startsWith(prefix) } }
+            }
+            .take(limit)
+    }
+
+    override suspend fun get(key: FoodKey): Food? =
+        if (mutableStatus.value != FoodDbStatus.Ready) null else foods.firstOrNull { it.key == key }
+
+    override suspend fun getAll(source: FoodSource, refs: List<String>): List<Food> =
+        if (mutableStatus.value != FoodDbStatus.Ready) emptyList() else foods.filter { it.key.source == source && it.key.ref in refs }
+
+    override suspend fun findByBarcodes(barcodes: List<String>): Food? =
+        foods.firstOrNull { it.barcode in barcodes }
+
+    override suspend fun portions(food: Food): List<FoodPortion> = portionsByFood["${food.key.source}:${food.key.ref}"].orEmpty()
+
+    override suspend fun meta(): Map<String, String> = emptyMap()
+}
+
+@Singleton
+class FakeFavoriteRepository @Inject constructor() : FavoriteRepository {
+
+    private val keys = MutableStateFlow<Set<FoodKey>>(emptySet())
+
+    val stored: Set<FoodKey> get() = keys.value
+
+    fun preset(vararg presets: FoodKey) {
+        keys.value = keys.value + presets
+    }
+
+    override fun observeAll(): Flow<List<FoodKey>> = keys.map { it.toList() }
+
+    override fun observeIsFavorite(key: FoodKey): Flow<Boolean> = keys.map { key in it }
+
+    override suspend fun setFavorite(key: FoodKey, favorite: Boolean) {
+        keys.value = if (favorite) keys.value + key else keys.value - key
+    }
+
+    override suspend fun deleteEverything() {
+        keys.value = emptySet()
     }
 }

@@ -1,4 +1,6 @@
 import com.android.build.api.artifact.SingleArtifact
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 
@@ -149,6 +151,44 @@ dependencies {
     androidTestImplementation(libs.compose.ui.test.junit4)
 }
 
+// --- Food database (PROMPT.md §5.1, §9) ---------------------------------------------------
+// -PfoodDb=sample (default) packages tools/food-db-builder/out/foods-sample.db (committed, small, for
+// development and tests); -PfoodDb=full packages out/foods-full.db (built by build_food_db.py, not
+// committed). The chosen file ends up as assets/databases/foods.db, which Room copies on first launch.
+
+val foodDbChoice = providers.gradleProperty("foodDb").orElse("sample").get()
+if (foodDbChoice != "sample" && foodDbChoice != "full") {
+    throw GradleException("-PfoodDb must be 'sample' or 'full', not '$foodDbChoice'.")
+}
+
+abstract class CopyFoodDbTask : DefaultTask() {
+
+    @get:Optional
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val source: RegularFileProperty
+
+    @get:Input
+    abstract val choice: Property<String>
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val file = source.orNull?.asFile
+        if (file == null || !file.isFile) {
+            throw GradleException(
+                "The ${choice.get()} food database is missing. Build it with " +
+                    "tools/food-db-builder/build_food_db.py (see its README), or build with -PfoodDb=sample.",
+            )
+        }
+        val target = outputDir.get().asFile.resolve("databases/foods.db")
+        target.parentFile.mkdirs()
+        Files.copy(file.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+
 // --- Offline safeguard (PROMPT.md §2.1, §2.4) --------------------------------------------
 // Fails the build if the merged manifest of any variant requests a permission other than
 // CAMERA. androidx.core adds an app-private, signature-level permission
@@ -198,6 +238,19 @@ abstract class VerifyManifestPermissionsTask : DefaultTask() {
 androidComponents {
     onVariants { variant ->
         val variantName = variant.name.replaceFirstChar { it.uppercase() }
+
+        val copyFoodDb = tasks.register<CopyFoodDbTask>("copy${variantName}FoodDb") {
+            description = "Packages the $foodDbChoice food database as assets/databases/foods.db ($variantName)."
+            choice.set(foodDbChoice)
+            val dbFile = rootProject.layout.projectDirectory.file("tools/food-db-builder/out/foods-$foodDbChoice.db")
+            if (dbFile.asFile.isFile) source.set(dbFile)
+            outputDir.set(layout.buildDirectory.dir("generated/foodDb/${variant.name}"))
+            if (variant.buildType == "release" && foodDbChoice != "full") {
+                logger.warn("WARNING: the release build packages the SAMPLE food database. Use -PfoodDb=full for a real release.")
+            }
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(copyFoodDb, CopyFoodDbTask::outputDir)
+
         val verify = tasks.register<VerifyManifestPermissionsTask>("verify${variantName}ManifestPermissions") {
             group = "verification"
             description = "Checks that the merged $variantName manifest only requests allowed permissions."

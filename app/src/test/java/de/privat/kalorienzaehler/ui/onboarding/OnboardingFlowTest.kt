@@ -1,19 +1,23 @@
 package de.privat.kalorienzaehler.ui.onboarding
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import de.privat.kalorienzaehler.R
+import de.privat.kalorienzaehler.data.fooddb.FoodDbStatus
 import de.privat.kalorienzaehler.domain.model.Goal
 import de.privat.kalorienzaehler.domain.model.GoalType
 import de.privat.kalorienzaehler.domain.model.Sex
 import de.privat.kalorienzaehler.domain.weight.WeightPoint
+import de.privat.kalorienzaehler.testing.FakeFoodRepository
 import de.privat.kalorienzaehler.testing.FakeProfileRepository
 import de.privat.kalorienzaehler.testing.FakeWeightRepository
 import de.privat.kalorienzaehler.testing.MainDispatcherRule
@@ -41,10 +45,11 @@ class OnboardingFlowTest {
 
     private val profiles = FakeProfileRepository()
     private val weights = FakeWeightRepository()
+    private val foodDb = FakeFoodRepository()
 
     @Before
     fun setUp() {
-        val viewModel = OnboardingViewModel(profiles, weights, TEST_CLOCK)
+        val viewModel = OnboardingViewModel(profiles, weights, foodDb, TEST_CLOCK)
         compose.setContent {
             KalorienzaehlerTheme(dynamicColor = false) { OnboardingScreen(viewModel) }
         }
@@ -79,6 +84,19 @@ class OnboardingFlowTest {
     fun welcomePageOffersToStart() {
         compose.onNodeWithText(string(R.string.onboarding_welcome_title)).assertIsDisplayed()
         compose.onNodeWithText(string(R.string.onboarding_welcome_start)).assertIsEnabled()
+    }
+
+    @Test
+    fun theWelcomePageMentionsTheFoodDatabaseWhileItIsBeingPrepared() {
+        val message = string(R.string.onboarding_food_db_preparing)
+        compose.onAllNodesWithText(message).assertCountEquals(0)
+        foodDb.setStatus(FoodDbStatus.Preparing)
+        compose.waitUntil { compose.onAllNodesWithText(message).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText(message).assertIsDisplayed()
+        // Starting is not blocked by it.
+        compose.onNodeWithText(string(R.string.onboarding_welcome_start)).assertIsEnabled()
+        foodDb.setStatus(FoodDbStatus.Ready)
+        compose.waitUntil { compose.onAllNodesWithText(message).fetchSemanticsNodes().isEmpty() }
     }
 
     @Test

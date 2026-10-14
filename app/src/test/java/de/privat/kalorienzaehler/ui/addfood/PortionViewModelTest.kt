@@ -1,6 +1,9 @@
 package de.privat.kalorienzaehler.ui.addfood
 
 import app.cash.turbine.test
+import de.privat.kalorienzaehler.data.repository.DefaultFoodCatalog
+import de.privat.kalorienzaehler.domain.diary.FoodKey
+import de.privat.kalorienzaehler.domain.diary.FoodPortion
 import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.domain.diary.FormError
 import de.privat.kalorienzaehler.domain.diary.Meal
@@ -8,13 +11,17 @@ import de.privat.kalorienzaehler.domain.diary.PerUnit
 import de.privat.kalorienzaehler.domain.energy.EnergyUnit
 import de.privat.kalorienzaehler.testing.FakeCustomFoodRepository
 import de.privat.kalorienzaehler.testing.FakeDiaryRepository
+import de.privat.kalorienzaehler.testing.FakeFavoriteRepository
+import de.privat.kalorienzaehler.testing.FakeFoodRepository
 import de.privat.kalorienzaehler.testing.FakeProfileRepository
 import de.privat.kalorienzaehler.testing.MainDispatcherRule
 import de.privat.kalorienzaehler.testing.TEST_CLOCK
 import de.privat.kalorienzaehler.testing.TEST_TODAY
 import de.privat.kalorienzaehler.testing.sampleProfile
+import de.privat.kalorienzaehler.testing.testBls
 import de.privat.kalorienzaehler.testing.testEntry
 import de.privat.kalorienzaehler.testing.testFood
+import de.privat.kalorienzaehler.testing.testOff
 import de.privat.kalorienzaehler.testing.testQuickEntry
 import de.privat.kalorienzaehler.ui.navigation.PortionRoute
 import de.privat.kalorienzaehler.ui.navigation.PortionTarget
@@ -32,24 +39,27 @@ class PortionViewModelTest {
     val mainDispatcher = MainDispatcherRule()
 
     private val foods = FakeCustomFoodRepository()
+    private val database = FakeFoodRepository()
     private val diary = FakeDiaryRepository()
+    private val favorites = FakeFavoriteRepository()
     private val profiles = FakeProfileRepository().apply { preset(sampleProfile()) }
 
-    private fun logging(foodId: Long, meal: Meal = Meal.MITTAGESSEN) = PortionViewModel(
-        PortionRoute(PortionTarget.NewFromCustomFood(foodId, TEST_TODAY.toEpochDay(), meal)),
-        foods,
+    private fun viewModel(target: PortionTarget) = PortionViewModel(
+        PortionRoute(target),
+        DefaultFoodCatalog(database, foods, favorites, diary),
+        favorites,
         diary,
         profiles,
         TEST_CLOCK,
     )
 
-    private fun editing(entryId: Long) = PortionViewModel(
-        PortionRoute(PortionTarget.ExistingEntry(entryId)),
-        foods,
-        diary,
-        profiles,
-        TEST_CLOCK,
-    )
+    private fun logging(foodId: Long, meal: Meal = Meal.MITTAGESSEN) =
+        logging(FoodKey(FoodSource.CUSTOM, foodId.toString()), meal)
+
+    private fun logging(key: FoodKey, meal: Meal = Meal.MITTAGESSEN) =
+        viewModel(PortionTarget.NewFromFood(key.source, key.ref, TEST_TODAY.toEpochDay(), meal))
+
+    private fun editing(entryId: Long) = viewModel(PortionTarget.ExistingEntry(entryId))
 
     @Test
     fun startsAt100GramsForAFoodWithoutAPortion() {
@@ -192,6 +202,157 @@ class PortionViewModelTest {
         val food = foods.preset(testFood(name = "Milch", perUnit = PerUnit.MILLILITER, servingG = 250.0)).single()
         val viewModel = logging(food.id)
         assertEquals(listOf("ml", "Portion (250 ml)"), viewModel.subject?.units?.map { it.key })
+    }
+
+    // --- Foods of the bundled database ---------------------------------------------------------
+
+    @Test
+    fun aBlsFoodOffersItsTypicalPortionsAndMarksEstimatedOnes() {
+        val apple = testBls("F100000", "Apfel", kcal = 52.0)
+        database.preset(apple)
+        database.presetPortions(
+            apple,
+            FoodPortion("Stück (mittel)", 150.0, estimated = true),
+            FoodPortion("Scheibe", 20.0, estimated = false),
+        )
+        val viewModel = logging(apple.key)
+        val units = viewModel.subject!!.units
+        assertEquals(listOf("g", "Stück (mittel)", "Scheibe"), units.map { it.key })
+        assertEquals(listOf(false, true, false), units.map { it.estimated })
+        // Starts at the first portion that is not a guess; 100 g would be the fallback.
+        assertEquals("Scheibe", viewModel.selectedUnit?.key)
+        assertEquals("1", viewModel.amountText)
+        assertEquals(10.4, viewModel.preview!!.kcal, 1e-9)
+        viewModel.selectUnit(1)
+        assertTrue(viewModel.selectedUnit!!.estimated)
+        assertEquals(78.0, viewModel.preview!!.kcal, 1e-9)
+    }
+
+    @Test
+    fun aBlsFoodWithOnlyEstimatedPortionsStartsAt100Grams() {
+        val apple = testBls("F100000", "Apfel", kcal = 52.0)
+        database.preset(apple)
+        database.presetPortions(apple, FoodPortion("Stück (mittel)", 150.0, estimated = true))
+        val viewModel = logging(apple.key)
+        assertEquals("g", viewModel.selectedUnit?.key)
+        assertEquals("100", viewModel.amountText)
+    }
+
+    @Test
+    fun loggingABlsFoodStoresItsKeyAndTheEstimatedWeight() = runTest {
+        val apple = testBls("F100000", "Apfel", kcal = 52.0)
+        database.preset(apple)
+        database.presetPortions(apple, FoodPortion("Stück (mittel)", 150.0, estimated = true))
+        val viewModel = logging(apple.key)
+        viewModel.selectUnit(1)
+        viewModel.onAmountChange("2")
+        viewModel.save()
+        val entry = diary.stored.single()
+        assertEquals(FoodSource.BLS, entry.source)
+        assertEquals("F100000", entry.foodRef)
+        assertEquals("Stück (mittel)", entry.unit)
+        assertEquals(2.0, entry.amount, 0.0)
+        assertEquals(300.0, entry.grams, 1e-9)
+        assertEquals(156.0, entry.nutrients.kcal, 1e-9)
+    }
+
+    @Test
+    fun anOpenFoodFactsFoodUsesItsPackPortion() {
+        val bar = testOff("4000000000001", "Müsliriegel", "Marke", kcal = 400.0)
+            .copy(servingG = 25.0, servingLabel = "1 Riegel")
+        database.preset(bar)
+        val viewModel = logging(bar.key)
+        assertEquals(listOf("g", "Portion (25 g)"), viewModel.subject?.units?.map { it.key })
+        assertEquals("Marke", viewModel.subject?.brand)
+        assertEquals(100.0, viewModel.preview!!.kcal, 1e-9)
+        assertTrue(viewModel.subject!!.showTable)
+    }
+
+    @Test
+    fun aDatabaseFoodThatIsGoneIsReported() {
+        val viewModel = logging(FoodKey(FoodSource.OFF, "4999999999999"))
+        assertTrue(viewModel.notFound)
+        assertFalse(viewModel.canSave)
+    }
+
+    // --- Favorites -----------------------------------------------------------------------------
+
+    @Test
+    fun theStarTogglesTheFavorite() = runTest {
+        val apple = testBls("F100000", "Apfel")
+        database.preset(apple)
+        val viewModel = logging(apple.key)
+        assertEquals(false, viewModel.isFavorite)
+        viewModel.toggleFavorite()
+        assertEquals(true, viewModel.isFavorite)
+        assertEquals(setOf(apple.key), favorites.stored)
+        viewModel.toggleFavorite()
+        assertEquals(false, viewModel.isFavorite)
+        assertEquals(emptySet<FoodKey>(), favorites.stored)
+    }
+
+    @Test
+    fun aFavoriteIsShownAsStarredWhenOpened() {
+        val food = foods.preset(testFood()).single()
+        favorites.preset(FoodKey(FoodSource.CUSTOM, food.id.toString()))
+        assertEquals(true, logging(food.id).isFavorite)
+    }
+
+    @Test
+    fun anOwnFoodCanBeStarred() = runTest {
+        val food = foods.preset(testFood()).single()
+        val viewModel = logging(food.id)
+        viewModel.toggleFavorite()
+        assertEquals(setOf(FoodKey(FoodSource.CUSTOM, food.id.toString())), favorites.stored)
+    }
+
+    @Test
+    fun anEntryOfAStarredFoodShowsTheStarToo() {
+        val apple = testBls("F100000", "Apfel")
+        database.preset(apple)
+        favorites.preset(apple.key)
+        val entry = diary.preset(testEntry().copy(source = FoodSource.BLS, foodRef = "F100000", name = "Apfel")).single()
+        assertEquals(true, editing(entry.id).isFavorite)
+    }
+
+    @Test
+    fun editingAnEntryKeepsTheEstimateFlagOfItsPortion() {
+        val apple = testBls("F100000", "Apfel", kcal = 52.0)
+        database.preset(apple)
+        database.presetPortions(apple, FoodPortion("Stück (mittel)", 150.0, estimated = true))
+        val entry = diary.preset(
+            testEntry().copy(source = FoodSource.BLS, foodRef = "F100000", name = "Apfel", amount = 2.0, unit = "Stück (mittel)", grams = 300.0),
+        ).single()
+        val viewModel = editing(entry.id)
+        assertTrue(viewModel.selectedUnit!!.estimated)
+    }
+
+    @Test
+    fun aQuickEntryHasNoStar() {
+        val entry = diary.preset(testQuickEntry()).single()
+        assertNull(editing(entry.id).isFavorite)
+    }
+
+    @Test
+    fun aFavoriteThatCannotBeStoredIsReported() = runTest {
+        val food = foods.preset(testFood()).single()
+        val viewModel = logging(food.id)
+        val failing = object : de.privat.kalorienzaehler.data.repository.FavoriteRepository by favorites {
+            override suspend fun setFavorite(key: FoodKey, favorite: Boolean) = throw java.io.IOException("disk full")
+        }
+        val failingViewModel = PortionViewModel(
+            PortionRoute(PortionTarget.NewFromFood(FoodSource.CUSTOM, food.id.toString(), TEST_TODAY.toEpochDay(), Meal.SNACKS)),
+            DefaultFoodCatalog(database, foods, favorites, diary),
+            failing,
+            diary,
+            profiles,
+            TEST_CLOCK,
+        )
+        failingViewModel.events.test {
+            failingViewModel.toggleFavorite()
+            assertEquals(FormEvent.FAILED, awaitItem())
+        }
+        assertEquals(false, viewModel.isFavorite)
     }
 
     @Test

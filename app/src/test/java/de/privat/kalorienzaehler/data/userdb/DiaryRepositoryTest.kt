@@ -9,6 +9,7 @@ import de.privat.kalorienzaehler.data.repository.RoomCustomFoodRepository
 import de.privat.kalorienzaehler.data.repository.RoomDiaryRepository
 import de.privat.kalorienzaehler.domain.diary.CustomFood
 import de.privat.kalorienzaehler.domain.diary.DiaryEntry
+import de.privat.kalorienzaehler.domain.diary.FoodKey
 import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.domain.diary.Meal
 import de.privat.kalorienzaehler.domain.diary.NutrientAmounts
@@ -231,6 +232,75 @@ class DiaryRepositoryTest {
         val kept = checkNotNull(diary.get(id))
         assertEquals("Haferflocken", kept.name)
         assertEquals(300.0, kept.nutrients.kcal, 0.0)
+    }
+
+    // --- Recently logged foods ("Zuletzt", search tier 1) ---------------------------------------
+
+    private suspend fun log(source: FoodSource, ref: String?, date: LocalDate = today, createdAt: Long = 1) {
+        diary.add(entry(date = date, source = source, foodRef = ref, createdAt = createdAt))
+    }
+
+    @Test
+    fun recentFoodsAreOrderedByHowOftenTheyWereLogged() = runTest {
+        log(FoodSource.CUSTOM, "1", createdAt = 10)
+        log(FoodSource.BLS, "B100000", createdAt = 20)
+        log(FoodSource.BLS, "B100000", createdAt = 30)
+        log(FoodSource.OFF, "4006381333931", createdAt = 40)
+        log(FoodSource.OFF, "4006381333931", createdAt = 50)
+        log(FoodSource.OFF, "4006381333931", createdAt = 60)
+        val recent = diary.observeRecentFoods(since = today.minusDays(30), limit = 10).first()
+        assertEquals(
+            listOf(
+                FoodKey(FoodSource.OFF, "4006381333931"),
+                FoodKey(FoodSource.BLS, "B100000"),
+                FoodKey(FoodSource.CUSTOM, "1"),
+            ),
+            recent,
+        )
+    }
+
+    @Test
+    fun equallyOftenLoggedFoodsShowTheMostRecentFirst() = runTest {
+        log(FoodSource.CUSTOM, "1", createdAt = 10)
+        log(FoodSource.CUSTOM, "2", createdAt = 20)
+        assertEquals(
+            listOf("2", "1"),
+            diary.observeRecentFoods(today.minusDays(30), 10).first().map { it.ref },
+        )
+    }
+
+    @Test
+    fun theSameReferenceInTwoSourcesIsTwoFoods() = runTest {
+        log(FoodSource.CUSTOM, "7", createdAt = 10)
+        log(FoodSource.BLS, "7", createdAt = 20)
+        val recent = diary.observeRecentFoods(today.minusDays(30), 10).first()
+        assertEquals(setOf(FoodKey(FoodSource.CUSTOM, "7"), FoodKey(FoodSource.BLS, "7")), recent.toSet())
+    }
+
+    @Test
+    fun recentFoodsIgnoreOldEntriesAndQuickEntries() = runTest {
+        log(FoodSource.CUSTOM, "1", date = today.minusDays(31))
+        log(FoodSource.CUSTOM, "2", date = today.minusDays(30))
+        log(FoodSource.QUICK, null)
+        assertEquals(
+            listOf(FoodKey(FoodSource.CUSTOM, "2")),
+            diary.observeRecentFoods(since = today.minusDays(30), limit = 10).first(),
+        )
+    }
+
+    @Test
+    fun recentFoodsAreLimited() = runTest {
+        repeat(5) { index -> log(FoodSource.BLS, "B$index", createdAt = index.toLong()) }
+        assertEquals(3, diary.observeRecentFoods(today.minusDays(30), limit = 3).first().size)
+    }
+
+    @Test
+    fun recentFoodsUpdateWhenSomethingIsLogged() = runTest {
+        diary.observeRecentFoods(today.minusDays(30), 10).test {
+            assertEquals(emptyList<FoodKey>(), awaitItem())
+            log(FoodSource.BLS, "B1")
+            assertEquals(listOf(FoodKey(FoodSource.BLS, "B1")), awaitItem())
+        }
     }
 
     private fun customFood(name: String, kcal: Double = 100.0, barcode: String? = null) = CustomFood(

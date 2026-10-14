@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
+import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.ui.addfood.AddFoodScreen
 import de.privat.kalorienzaehler.ui.addfood.CustomFoodScreen
 import de.privat.kalorienzaehler.ui.addfood.PortionScreen
@@ -71,9 +72,11 @@ fun KalorienzaehlerRoot() {
                 onQuickEntry = { navigator.navigate(QuickEntryRoute(route.epochDay, route.meal)) },
                 onCreateCustom = { navigator.navigate(CustomFoodRoute(logTo = LogTarget(route.epochDay, route.meal))) },
                 onLogFood = { food ->
-                    navigator.navigate(PortionRoute(PortionTarget.NewFromCustomFood(food.id, route.epochDay, route.meal)))
+                    navigator.navigate(
+                        PortionRoute(PortionTarget.NewFromFood(food.key.source, food.key.ref, route.epochDay, route.meal)),
+                    )
                 },
-                onEditFood = { food -> navigator.navigate(CustomFoodRoute(customFoodId = food.id)) },
+                onEditFood = { food -> food.key.ref.toLongOrNull()?.let { navigator.navigate(CustomFoodRoute(customFoodId = it)) } },
             )
         }
         entry<QuickEntryRoute> { route ->
@@ -91,7 +94,9 @@ fun KalorienzaehlerRoot() {
                     if (isNew && logTo != null) {
                         // A new food from the add flow goes straight on to choosing the amount.
                         navigator.replaceCurrent(
-                            PortionRoute(PortionTarget.NewFromCustomFood(foodId, logTo.epochDay, logTo.meal)),
+                            PortionRoute(
+                                PortionTarget.NewFromFood(FoodSource.CUSTOM, foodId.toString(), logTo.epochDay, logTo.meal),
+                            ),
                         )
                     } else {
                         navigator.goBack()

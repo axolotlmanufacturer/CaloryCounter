@@ -11,12 +11,14 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.privat.kalorienzaehler.data.repository.CustomFoodRepository
 import de.privat.kalorienzaehler.data.repository.DiaryRepository
+import de.privat.kalorienzaehler.data.repository.FavoriteRepository
+import de.privat.kalorienzaehler.data.repository.FoodCatalog
 import de.privat.kalorienzaehler.data.repository.ProfileRepository
 import de.privat.kalorienzaehler.domain.diary.AmountInput
 import de.privat.kalorienzaehler.domain.diary.AmountUnit
 import de.privat.kalorienzaehler.domain.diary.DiaryEntry
+import de.privat.kalorienzaehler.domain.diary.FoodKey
 import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.domain.diary.Meal
 import de.privat.kalorienzaehler.domain.diary.NutrientAmounts
@@ -37,6 +39,8 @@ import kotlinx.coroutines.launch
 
 /** The food (or the logged entry) the amount is chosen for. */
 data class PortionSubject(
+    /** The food, if it can be a favorite; `null` for entries that have no food behind them. */
+    val key: FoodKey?,
     val name: String,
     val brand: String?,
     val perUnit: PerUnit,
@@ -49,12 +53,13 @@ data class PortionSubject(
 
 /**
  * Amount, unit and meal for one food, with a live preview of the energy and macros. Used both to log
- * a food ([PortionTarget.NewFromCustomFood]) and to change a logged entry ([PortionTarget.ExistingEntry]).
+ * a food ([PortionTarget.NewFromFood]) and to change a logged entry ([PortionTarget.ExistingEntry]).
  */
 @HiltViewModel(assistedFactory = PortionViewModel.Factory::class)
 class PortionViewModel @AssistedInject constructor(
     @Assisted private val route: PortionRoute,
-    private val customFoods: CustomFoodRepository,
+    private val catalog: FoodCatalog,
+    private val favorites: FavoriteRepository,
     private val diary: DiaryRepository,
     profiles: ProfileRepository,
     private val clock: Clock,
@@ -97,6 +102,10 @@ class PortionViewModel @AssistedInject constructor(
 
     val selectedUnit: AmountUnit? get() = subject?.units?.getOrNull(unitIndex)
 
+    /** Whether the food carries a star; `null` when it cannot (an entry without a food). */
+    var isFavorite: Boolean? by mutableStateOf(null)
+        private set
+
     private val parsedAmount by derivedStateOf { AmountInput.parse(amountText) }
 
     val amountError by derivedStateOf { parsedAmount.error }
@@ -113,7 +122,6 @@ class PortionViewModel @AssistedInject constructor(
 
     private var saving by mutableStateOf(false)
     private var existing: DiaryEntry? = null
-    private var customFoodId: Long? = null
 
     private val eventChannel = Channel<FormEvent>(Channel.BUFFERED)
     val events: Flow<FormEvent> = eventChannel.receiveAsFlow()
@@ -122,26 +130,31 @@ class PortionViewModel @AssistedInject constructor(
         viewModelScope.launch {
             energyUnit = profiles.profile.first()?.energyUnit ?: EnergyUnit.KCAL
             when (val target = route.target) {
-                is PortionTarget.NewFromCustomFood -> loadFood(target)
+                is PortionTarget.NewFromFood -> loadFood(target)
                 is PortionTarget.ExistingEntry -> loadEntry(target)
             }
             isLoaded = true
+            subject?.key?.let(::observeFavorite)
         }
     }
 
-    private suspend fun loadFood(target: PortionTarget.NewFromCustomFood) {
-        val food = customFoods.get(target.customFoodId)
+    private fun observeFavorite(key: FoodKey) {
+        viewModelScope.launch { favorites.observeIsFavorite(key).collect { isFavorite = it } }
+    }
+
+    private suspend fun loadFood(target: PortionTarget.NewFromFood) {
+        val key = FoodKey(target.source, target.ref)
+        val food = catalog.load(key)
         if (food == null) {
             notFound = true
             return
         }
-        customFoodId = food.id
         meal = target.meal
         date = LocalDate.ofEpochDay(target.epochDay)
-        val units = AmountUnit.forFood(food.perUnit, food.servingG)
-        subject = PortionSubject(food.name, food.brand, food.perUnit, food.nutrients, units, showTable = true)
-        // A known portion is the natural first choice; otherwise start at 100 g/ml.
-        unitIndex = units.lastIndex
+        val units = food.units()
+        subject = PortionSubject(key, food.name, food.brand, food.perUnit, food.nutrients, units, showTable = true)
+        // The pack's own portion is the natural first choice; otherwise start at 100 g/ml.
+        unitIndex = units.indexOfFirst { !it.isBase && !it.estimated }.takeIf { it >= 0 } ?: 0
         amountText = defaultAmount(units[unitIndex])
     }
 
@@ -156,16 +169,34 @@ class PortionViewModel @AssistedInject constructor(
         meal = entry.meal
         date = entry.date
         val perUnit = if (entry.unit == PerUnit.MILLILITER.code) PerUnit.MILLILITER else PerUnit.GRAM
+        val key = entry.foodRef?.takeIf { entry.source != FoodSource.QUICK }?.let { FoodKey(entry.source, it) }
+        // The unit keeps what it was logged as; whether its weight was an estimate comes from the food, if it is still there.
+        val estimated = key?.let { catalog.load(it) }?.units()?.firstOrNull { it.key == entry.unit }?.estimated ?: false
         subject = PortionSubject(
+            key = key,
             name = entry.name,
             brand = entry.brand,
             perUnit = perUnit,
             per100 = per100,
-            units = listOf(AmountUnit.of(entry)),
+            units = listOf(AmountUnit.of(entry).copy(estimated = estimated)),
             showTable = false,
         )
         unitIndex = 0
         amountText = GermanFormat.editable(entry.amount, maxFractionDigits = 2)
+    }
+
+    fun toggleFavorite() {
+        val key = subject?.key ?: return
+        val target = !(isFavorite ?: false)
+        viewModelScope.launch {
+            try {
+                favorites.setFavorite(key, target)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                eventChannel.send(FormEvent.FAILED)
+            }
+        }
     }
 
     fun onAmountChange(text: String) {
@@ -202,8 +233,8 @@ class PortionViewModel @AssistedInject constructor(
                         DiaryEntry(
                             date = date,
                             meal = meal,
-                            source = FoodSource.CUSTOM,
-                            foodRef = customFoodId?.toString(),
+                            source = checkNotNull(current.key).source,
+                            foodRef = current.key.ref,
                             name = current.name,
                             brand = current.brand,
                             amount = amount,
