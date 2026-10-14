@@ -23,4 +23,11 @@ kotlin {
 dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)
+    // Reads the shared normalization vectors of the food database builder.
+    testImplementation(libs.kotlinx.serialization.json)
+}
+
+// The Python builder and the Kotlin normalizer are tested against the same vectors (PROMPT.md section 5.2).
+tasks.named<ProcessResources>("processTestResources") {
+    from(rootProject.file("tools/food-db-builder/normalize_cases.json"))
 }
