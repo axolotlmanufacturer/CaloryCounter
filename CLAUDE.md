@@ -60,10 +60,11 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   - `data/fooddb/`: **read-only** Room DB `foods.db`, created from an asset with FTS4 search.
   - `data/userdb/`: **read-write** Room DB `user.db` (diary, weight, custom foods, favorites).
     Exported schemas are in `app/schemas/` (committed). Use explicit migrations; no
-    destructive fallback in release.
+    destructive fallback in release. DAOs exist for weight, diary and custom foods (favorites with the food DB).
   - `data/prefs/`: DataStore (profile and settings).
   - `data/repository/`: repositories. Keep them export-friendly; CSV/JSON export is the likely next feature.
-  - `ui/`: one package per screen.
+  - `ui/`: one package per screen (`today`, `addfood` = all full-screen logging steps, `diary` = shared
+    diary text/components, `profile` = form fields and plan text, `settings`, `onboarding`, `navigation`).
 - `tools/food-db-builder/`: Python + DuckDB pipeline that builds `foods.db` from BLS 4.0 and
   Open Food Facts. It creates tables using Room's exported `createSql`.
 
@@ -159,6 +160,34 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   text metrics, and `hasVisualOverflow` fires for every shrink-wrapped text, so neither is usable;
   the detector uses `didOverflowHeight`, `multiParagraph.didExceedMaxLines` and bounds off screen.
   `TextOverflowDetectorTest` proves the detector can fail. Use one `setContent` per test.
+- **Diary model (Phase 3):** `:domain/diary` holds `DiaryEntry` (nutrient snapshot: kcal + nullable
+  protein/carbs/fat), `CustomFood`, `NutrientsPer100.forGrams`, `DiaryMath` (day/meal totals, incomplete-macro
+  count), `EnergyBalance`/`MacroProgress`, `FoodPlausibility` (warnings that never block), the text-based form
+  drafts (`QuickEntryDraft`, `CustomFoodDraft`, `AmountInput`) and `AmountUnit`. `Meal`, `FoodSource`, `PerUnit` live
+  there too (stored by name/code, so the Room schema is unchanged: `user.db` is still version 1).
+  Repositories expose domain models, never entities (`RoomDiaryRepository`, `RoomCustomFoodRepository`).
+- **Entries and units:** `diary_entry.unit` is what the UI shows: `g`, `ml` or a portion label such as
+  `Portion (30 g)` (the label carries the size, so a food edited later cannot change old entries). A quick
+  entry has `source = QUICK`, `amount = 1`, `grams = 0` ("unknown", it has no amount) and may leave macros null.
+  Editing an amount rescales weight and nutrients proportionally from the snapshot (`DiaryEntry.withAmount`);
+  per-100 values of an entry are derived (`per100()`), so editing works even if the food is gone.
+  Energy inputs are always **kcal**, whatever the display unit.
+- **Undo:** delete = `diary.delete(id)` + event; undo = `diary.restore(entry)` (re-insert with the same id, REPLACE).
+  "Von gestern kopieren" = `copyMeal` in one Room transaction, returns the new ids so the copy can be undone.
+- **Heute:** `HorizontalPager` with 73.001 pages (one per day, +-100 years around today); the date bar
+  (arrows, picker, "Heute") is a custom top bar. While a row is being swiped away the pager's user scroll is
+  off (`rowSwiping`), otherwise a fast full-width swipe also changed the day. `SwipeToDismissBoxState` is
+  created with `remember`, **not** `rememberSwipeToDismissBoxState` (that one is saved per list item). "Over target" uses
+  `overTargetColor()` (amber, light/dark), never red.
+- **Full-screen steps** (`AddFoodRoute`, `QuickEntryRoute`, `PortionRoute`, `CustomFoodRoute`, all `@Serializable`, days as
+  epoch days) use `FullScreenScaffold` (own top bar without fixed height, content insets = navigation bar + IME)
+  and `BottomActionBar`. ViewModels get their route through Hilt assisted injection:
+  `hiltViewModel<VM, VM.Factory>(creationCallback = { it.create(route) })`. After saving, `Navigator.popToTopLevelRoot()`;
+  a new custom food created from the add flow `replaceCurrent`s itself by the amount screen.
+- **Search text:** `TextNormalizer` (PROMPT.md section 5.2) is in `:domain` (`[^a-z0-9]` -> space, ae/oe/ue -> a/o/u);
+  the Python builder must apply the identical function (shared `normalize_cases.json` comes with Phase 4).
+  The add screen filters custom foods with `matchesPrefixes`; the 150 ms debounce arrives with FTS search.
+- **Day sums** are computed in Kotlin (`DiaryMath`) from the day's entries; SQL range sums come with the statistics (Phase 6).
 - The keystore can't live in the ephemeral cloud container. How to handle it is decided in Phase 8.
 
 ## Gotchas
@@ -197,6 +226,13 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   fallback. Not needed on a normal machine.
 - The wrapper jar is Gradle 9.7.1's official jar (SHA-256 `7a9ce74c…`); the distribution is
   pinned by `distributionSha256Sum`.
+- Hilt ViewModels in Robolectric tests run `viewModelScope` on the real main looper: after a click that ends in a
+  ViewModel coroutine (undo, save) use `compose.waitUntil { ... }` before asserting on the UI.
+- Turbine on a `stateIn(WhileSubscribed)` flow: the first item may already be the loaded value, not the initial `null`.
+- Bottom-bar tabs share their label with other buttons ("Heute" is also the date bar): tests match tabs with
+  `hasText(...) and isSelectable()`.
+- 200 % font-scale tests (`DiaryFontScaleTest`) only see composed nodes: scroll lazy-list items into view with
+  `scrollListTo(text)` before `clippedTexts()`. The detector was mutation-checked (`maxLines = 1` on an entry name fails it).
 - `:domain` can be tested without the Android SDK: see "Testing `:domain` without the SDK".
 
 ## Testing `:domain` without the SDK
@@ -218,6 +254,13 @@ present after any `./gradlew --version`):
 `gradle -I <repo>/scripts/gradle/maven-central-mirror.init.gradle.kts :domain:test`.
 
 ## Open items for later phases
+
+- Phase 4: merge food-DB search results, "Favoriten" chip and `food_portions` into `AddFoodViewModel`/`PortionViewModel`
+  (the units list and `PortionSubject` are already generic); add the 150 ms search debounce; shared normalization test data.
+- Phase 5: barcode check-digit validation (`BarcodeNormalizer`), `CustomFoodRoute` gets a barcode prefill, scanner button on the add screen.
+- Phase 6: SQL range sums per day for the statistics (`DiaryDao`), tests for them.
+- Phase 7: `TodayViewModel.today` is read when the screen is created: refresh at midnight; "Alle Daten loeschen" must also
+  call `diary.deleteEverything()` / `customFoods.deleteEverything()` (both exist already).
 
 - Phase 7: Material 3's `NavigationBarItem` has a fixed 80 dp height, so tab labels clip at 200 %
   font scale (PROMPT.md §8); needs a custom bar or `ShortNavigationBar` check. `FontScaleTest`
