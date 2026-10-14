@@ -42,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -65,6 +66,8 @@ import java.time.ZoneOffset
 import kotlin.math.abs
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+
+private const val LARGE_FONT_SCALE = 1.4f
 
 /** The page of the pager that shows "today"; one page per day, 100 years either way. */
 internal const val TODAY_PAGE = 36_500
@@ -246,17 +249,20 @@ private fun DateBar(
             ) {
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.titleLarge,
+                    // "Mo., 12.10.2026" must fit between the arrows even at 200 % font size.
+                    style = if (LocalDensity.current.fontScale > LARGE_FONT_SCALE) {
+                        MaterialTheme.typography.titleMedium
+                    } else {
+                        MaterialTheme.typography.titleLarge
+                    },
                     textAlign = TextAlign.Center,
                     modifier = Modifier.semantics { contentDescription = pickDescription },
                 )
             }
             if (date != today) {
-                TextButton(onClick = onJumpToToday) {
-                    Text(
-                        text = stringResource(R.string.date_today),
-                        modifier = Modifier.semantics { contentDescription = jumpDescription },
-                    )
+                // An icon, not a word: at 200 % font size a "Heute" button would take the room of the date.
+                IconButton(onClick = onJumpToToday) {
+                    Icon(painterResource(R.drawable.ic_today_24), contentDescription = jumpDescription)
                 }
             }
             IconButton(onClick = onNext) {

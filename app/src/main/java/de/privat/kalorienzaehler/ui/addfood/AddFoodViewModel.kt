@@ -99,7 +99,9 @@ class AddFoodViewModel @AssistedInject constructor(
         queryFlow.value = text
     }
 
+    /** Choosing a chip leaves the search: the typed text is cleared and the chosen list shows. */
     fun selectFilter(filter: AddFilter) {
+        onQueryChange("")
         chosenFilter.value = filter
     }
 

@@ -8,6 +8,7 @@ import de.privat.kalorienzaehler.domain.diary.CustomFood
 import de.privat.kalorienzaehler.domain.diary.DiaryEntry
 import de.privat.kalorienzaehler.domain.diary.Meal
 import de.privat.kalorienzaehler.domain.model.UserProfile
+import de.privat.kalorienzaehler.domain.text.TextNormalizer
 import de.privat.kalorienzaehler.domain.weight.WeightPoint
 import java.io.IOException
 import java.time.Clock
@@ -126,6 +127,8 @@ class FakeDiaryRepository @Inject constructor() : DiaryRepository {
 
     override suspend fun copyMeal(from: LocalDate, to: LocalDate, meal: Meal, createdAtMillis: Long): List<Long> {
         if (failWrites) throw IOException("disk full")
+        // Like the real repository: only an empty meal is filled.
+        if (entries.value.values.any { it.date == to && it.meal == meal }) return emptyList()
         val copies = entries.value.values
             .filter { it.date == from && it.meal == meal }
             .sortedWith(ORDER)
@@ -169,7 +172,7 @@ class FakeCustomFoodRepository @Inject constructor() : CustomFoodRepository {
     }
 
     override fun observeAll(): Flow<List<CustomFood>> =
-        foods.map { all -> all.values.sortedWith(compareBy({ it.name.lowercase() }, { it.id })) }
+        foods.map { all -> all.values.sortedWith(compareBy({ TextNormalizer.normalize(it.name) }, { it.id })) }
 
     override fun observeRecent(since: LocalDate, limit: Int): Flow<List<CustomFood>> =
         kotlinx.coroutines.flow.combine(foods, recentIds) { all, ids -> ids.mapNotNull(all::get).take(limit) }

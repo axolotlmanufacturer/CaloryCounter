@@ -152,6 +152,19 @@ class TodayViewModelTest {
     }
 
     @Test
+    fun copyingTwiceInARowOnlyCopiesOnce() = runTest {
+        diary.preset(testEntry(date = yesterday, meal = Meal.FRUEHSTUECK, name = "Müsli"))
+        val viewModel = viewModel()
+        viewModel.events.test {
+            viewModel.copyFromPreviousDay(TEST_TODAY, Meal.FRUEHSTUECK)
+            viewModel.copyFromPreviousDay(TEST_TODAY, Meal.FRUEHSTUECK)
+            assertEquals(1, (awaitItem() as TodayEvent.MealCopied).ids.size)
+            expectNoEvents()
+        }
+        assertEquals(1, diary.stored.count { it.date == TEST_TODAY })
+    }
+
+    @Test
     fun copyingAnEmptyMealSaysNothing() = runTest {
         val viewModel = viewModel()
         viewModel.events.test {

@@ -47,4 +47,22 @@ class TextOverflowDetectorTest {
         }
         assertEquals(emptyList<String>(), compose.clippedTexts())
     }
+
+    @Test
+    fun aWordBrokenInTheMiddleIsDetected() {
+        compose.setContent { Text("Kohlenhydrate Eiweiß", modifier = Modifier.width(60.dp)) }
+        assertEquals(listOf("Kohlenhydrate Eiweiß"), compose.textsWithBrokenWords())
+    }
+
+    @Test
+    fun textsThatWrapBetweenWordsAreNotReportedAsBroken() {
+        compose.setContent {
+            Column {
+                Text("Kurz")
+                Text(longText, modifier = Modifier.width(120.dp))
+                Text("Mifflin-St Jeor", modifier = Modifier.width(60.dp))
+            }
+        }
+        assertEquals(emptyList<String>(), compose.textsWithBrokenWords())
+    }
 }

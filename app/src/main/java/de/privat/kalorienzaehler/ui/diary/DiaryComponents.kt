@@ -2,6 +2,8 @@ package de.privat.kalorienzaehler.ui.diary
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -172,24 +174,20 @@ fun gramsOrMissing(grams: Double?): String =
         stringResource(R.string.unit_g_value, GermanFormat.decimal(grams, 1))
     }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun NutritionRow(label: String, value: String, indented: Boolean = false, divider: Boolean = true) {
-    Row(
+    // Label and value share a line when they fit; at large font sizes the value wraps below the label
+    // instead of squeezing a word ("Kohlenhydrate") into half of the width.
+    FlowRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .padding(start = if (indented) 16.dp else 0.dp),
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f, fill = false))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.End,
-            modifier = Modifier
-                .weight(1f, fill = false)
-                .padding(start = 12.dp),
-        )
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(end = 12.dp))
+        Text(value, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.End)
     }
     if (divider) HorizontalDivider()
 }

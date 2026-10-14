@@ -89,6 +89,19 @@ class AddFoodViewModelTest {
     }
 
     @Test
+    fun tappingAChipDuringASearchLeavesTheSearch() = runTest {
+        foods.preset(testFood(name = "Haferflocken"), testFood(name = "Apfelmus", brand = null))
+        val viewModel = viewModel()
+        viewModel.onQueryChange("hafer")
+        assertEquals(AddMode.SEARCH, viewModel.current().mode)
+        viewModel.selectFilter(AddFilter.CUSTOM)
+        assertEquals("", viewModel.query)
+        val state = viewModel.current()
+        assertEquals(AddMode.CUSTOM, state.mode)
+        assertEquals(2, state.foods.size)
+    }
+
+    @Test
     fun typingSearchesTheOwnFoodsIgnoringUmlautsAndCase() = runTest {
         foods.preset(
             testFood(name = "Käsebrot", brand = null),

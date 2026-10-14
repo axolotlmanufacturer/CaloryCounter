@@ -11,7 +11,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CustomFoodDao {
 
-    @Query("SELECT * FROM custom_food ORDER BY name COLLATE NOCASE, id")
+    /** In creation order; the repository sorts alphabetically, because SQLite's NOCASE only folds ASCII. */
+    @Query("SELECT * FROM custom_food ORDER BY id")
     fun observeAll(): Flow<List<CustomFoodEntity>>
 
     /**

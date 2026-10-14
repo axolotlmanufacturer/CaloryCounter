@@ -2,6 +2,7 @@ package de.privat.kalorienzaehler.ui.today
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
@@ -233,6 +234,25 @@ class TodayContentTest {
     }
 
     @Test
+    fun screenReadersGetADeleteActionOnTheRowTheyFocus() {
+        val entry = testEntry(id = 5, name = "Haferbrei")
+        diary.value = listOf(entry)
+        show()
+        val actions = compose.onNodeWithText("Haferbrei").fetchSemanticsNode().config[SemanticsActions.CustomActions]
+        assertEquals(listOf(string(R.string.action_delete)), actions.map { it.label })
+        compose.runOnIdle { actions.single().action() }
+        assertEquals(listOf(entry), deleted)
+    }
+
+    @Test
+    fun theDateOfAnotherDayIsDescribedForTalkBack() {
+        show()
+        compose.onNodeWithContentDescription(string(R.string.today_previous_day)).performClick()
+        compose.onNodeWithContentDescription(string(R.string.today_pick_date, string(R.string.date_yesterday))).assertIsDisplayed()
+        compose.onNodeWithContentDescription(string(R.string.today_jump_to_today)).assertIsDisplayed()
+    }
+
+    @Test
     fun yesterdaysMealCanBeCopiedIntoAnEmptyMeal() {
         diary.value = listOf(
             testEntry(id = 1, date = yesterday, meal = Meal.FRUEHSTUECK),
@@ -285,7 +305,7 @@ class TodayContentTest {
         compose.onNodeWithText("Gestriges").assertIsDisplayed()
         compose.onNodeWithText("Heutiges").assertDoesNotExist()
 
-        compose.onNode(hasText(string(R.string.date_today)) and hasClickAction()).performClick()
+        compose.onNodeWithContentDescription(string(R.string.today_jump_to_today)).performClick()
         compose.onNodeWithText("Heutiges").assertIsDisplayed()
     }
 

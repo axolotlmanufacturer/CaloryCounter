@@ -34,6 +34,8 @@ class RoomDiaryRepository @Inject constructor(
 
     override suspend fun copyMeal(from: LocalDate, to: LocalDate, meal: Meal, createdAtMillis: Long): List<Long> =
         database.withTransaction {
+            // Only an empty meal is filled: a second tap (or a second call) cannot duplicate the copy.
+            if (dao.getMeal(to, meal).isNotEmpty()) return@withTransaction emptyList()
             val copies = dao.getMeal(from, meal).map { it.toDomain().copiedTo(to, createdAtMillis).toEntity() }
             dao.insertAll(copies)
         }

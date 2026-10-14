@@ -124,6 +124,15 @@ class CustomFoodRepositoryTest {
     }
 
     @Test
+    fun umlautsSortWithTheirBaseLetterNotAfterZ() = runTest {
+        listOf("Zwieback", "Öl", "Brot", "Äpfel getrocknet", "Käse", "Kuchen", "Oel-Sardinen").forEach { foods.save(food(it)) }
+        assertEquals(
+            listOf("Äpfel getrocknet", "Brot", "Käse", "Kuchen", "Öl", "Oel-Sardinen", "Zwieback"),
+            foods.observeAll().first().map { it.name },
+        )
+    }
+
+    @Test
     fun deletingAFoodRemovesIt() = runTest {
         val id = foods.save(food("Weg"))
         foods.delete(id)

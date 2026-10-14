@@ -25,6 +25,7 @@ interface DiaryRepository {
 
     /**
      * Copies every entry of [meal] on [from] to the same meal on [to], stamped with [createdAtMillis].
+     * Only an empty meal is filled: if [to] already has entries for [meal], nothing is copied.
      * Returns the ids of the new entries (so the copy can be undone with [deleteAll]).
      */
     suspend fun copyMeal(from: LocalDate, to: LocalDate, meal: Meal, createdAtMillis: Long): List<Long>

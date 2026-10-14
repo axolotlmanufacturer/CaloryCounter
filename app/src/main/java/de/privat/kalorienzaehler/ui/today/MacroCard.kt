@@ -2,12 +2,12 @@ package de.privat.kalorienzaehler.ui.today
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -55,6 +55,7 @@ fun MacroCard(totals: DiaryTotals, targets: MacroTargets?, modifier: Modifier = 
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MacroRow(label: String, eatenG: Double, targetG: Double?) {
     val progress = targetG?.let { MacroProgress(eatenG, it) }
@@ -65,15 +66,14 @@ private fun MacroRow(label: String, eatenG: Double, targetG: Double?) {
         stringResource(R.string.macro_progress_value, gramsText(eatenG), gramsText(targetG))
     }
     Column {
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f, fill = false))
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.End,
-                modifier = Modifier.weight(1f, fill = false),
-            )
+        // Label and value share a line when they fit; at large font sizes the value wraps below the
+        // label instead of squeezing a word ("Kohlenhydrate") into half of the width.
+        FlowRow(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyLarge)
+            Text(value, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.End)
         }
         if (progress != null) {
             Spacer(Modifier.height(4.dp))

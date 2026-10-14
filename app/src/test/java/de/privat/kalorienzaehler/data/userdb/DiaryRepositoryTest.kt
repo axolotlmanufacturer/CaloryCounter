@@ -171,6 +171,32 @@ class DiaryRepositoryTest {
     }
 
     @Test
+    fun copyingTwiceDoesNotDuplicateTheMeal() = runTest {
+        diary.add(entry(date = yesterday, name = "Müsli", createdAt = 10))
+        diary.add(entry(date = yesterday, name = "Kaffee", createdAt = 20))
+        val first = diary.copyMeal(yesterday, today, Meal.FRUEHSTUECK, 5)
+        val second = diary.copyMeal(yesterday, today, Meal.FRUEHSTUECK, 6)
+        assertEquals(2, first.size)
+        assertEquals(emptyList<Long>(), second)
+        assertEquals(2, diary.observeDay(today).first().size)
+    }
+
+    @Test
+    fun aMealThatAlreadyHasEntriesIsNotCopiedInto() = runTest {
+        diary.add(entry(date = yesterday, name = "Müsli"))
+        diary.add(entry(date = today, name = "schon da"))
+        assertEquals(emptyList<Long>(), diary.copyMeal(yesterday, today, Meal.FRUEHSTUECK, 5))
+        assertEquals(listOf("schon da"), diary.observeDay(today).first().map { it.name })
+    }
+
+    @Test
+    fun anotherMealOfTheTargetDayDoesNotBlockTheCopy() = runTest {
+        diary.add(entry(date = yesterday, meal = Meal.FRUEHSTUECK, name = "Müsli"))
+        diary.add(entry(date = today, meal = Meal.ABENDESSEN, name = "Suppe"))
+        assertEquals(1, diary.copyMeal(yesterday, today, Meal.FRUEHSTUECK, 5).size)
+    }
+
+    @Test
     fun aCopyCanBeUndoneByItsIds() = runTest {
         diary.add(entry(date = yesterday, name = "Müsli"))
         diary.add(entry(date = today, name = "bleibt"))

@@ -1,7 +1,11 @@
 package de.privat.kalorienzaehler.ui
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import de.privat.kalorienzaehler.domain.diary.CustomFoodDraft
 import de.privat.kalorienzaehler.domain.diary.DiaryEntry
@@ -16,6 +20,7 @@ import de.privat.kalorienzaehler.testing.TEST_TODAY
 import de.privat.kalorienzaehler.R
 import de.privat.kalorienzaehler.testing.clippedTexts
 import de.privat.kalorienzaehler.testing.scrollListTo
+import de.privat.kalorienzaehler.testing.textsWithBrokenWords
 import de.privat.kalorienzaehler.testing.string
 import de.privat.kalorienzaehler.testing.dayData
 import de.privat.kalorienzaehler.testing.sampleProfile
@@ -54,8 +59,10 @@ class DiaryFontScaleTest {
     private val plan = GoalPlanner.plan(sampleProfile(), 80.0, TEST_TODAY).let { DayPlan(it.targetKcal, it.macros) }
     private val snackbar = SnackbarHostState()
 
-    private fun assertNothingClipped(label: String) =
+    private fun assertNothingClipped(label: String) {
         assertEquals("clipped texts on $label", emptyList<String>(), compose.clippedTexts())
+        assertEquals("words broken across lines on $label", emptyList<String>(), compose.textsWithBrokenWords())
+    }
 
     private fun heute(entries: List<DiaryEntry>, previous: List<DiaryEntry>, unit: EnergyUnit = EnergyUnit.KCAL) {
         compose.setContent {
@@ -89,6 +96,21 @@ class DiaryFontScaleTest {
             compose.scrollListTo(entry.name)
             assertNothingClipped("Heute at ${entry.name}")
         }
+    }
+
+    @Test
+    fun theDateBarFitsOnOtherDaysToo() {
+        heute(emptyList(), previous = emptyList())
+        listOf(
+            string(R.string.today_previous_day),
+            string(R.string.today_previous_day),
+            string(R.string.today_previous_day),
+        ).forEach {
+            compose.onNodeWithContentDescription(it).performClick()
+            assertNothingClipped("the date bar")
+        }
+        // Three days back (Saturday, 10 October 2026) with the long weekday date and the "to today" icon.
+        compose.onNodeWithText("Sa., 10.10.2026").assertIsDisplayed()
     }
 
     @Test

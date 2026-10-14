@@ -39,7 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import de.privat.kalorienzaehler.R
 import de.privat.kalorienzaehler.domain.diary.CustomFood
 import de.privat.kalorienzaehler.domain.diary.PerUnit
@@ -106,6 +109,8 @@ fun AddFoodContent(
         modifier = modifier,
     ) { innerPadding ->
         val searchFocus = remember { FocusRequester() }
+        // Survives the search item leaving and re-entering composition while the list is scrolled.
+        var focusRequested by rememberSaveable { mutableStateOf(false) }
         LazyColumn(
             contentPadding = PaddingValues(bottom = 24.dp),
             modifier = Modifier
@@ -133,7 +138,12 @@ fun AddFoodContent(
                         .focusRequester(searchFocus),
                 )
                 // The search field takes the focus when the screen opens (PROMPT.md §7.3).
-                LaunchedEffect(Unit) { searchFocus.requestFocus() }
+                LaunchedEffect(Unit) {
+                    if (!focusRequested) {
+                        focusRequested = true
+                        searchFocus.requestFocus()
+                    }
+                }
             }
             item(key = "actions") {
                 FlowRow(

@@ -130,11 +130,16 @@ fun EntryRow(
                 )
             }
         },
-        modifier = modifier.semantics {
-            customActions = listOf(CustomAccessibilityAction(deleteLabel) { onDelete(); true })
-        },
+        modifier = modifier,
     ) {
-        Surface(onClick = onClick, color = MaterialTheme.colorScheme.surface) {
+        Surface(
+            onClick = onClick,
+            color = MaterialTheme.colorScheme.surface,
+            // Screen readers cannot swipe: the row itself offers "Löschen" (it is the node they focus).
+            modifier = Modifier.semantics {
+                customActions = listOf(CustomAccessibilityAction(deleteLabel) { currentOnDelete(); true })
+            },
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier

@@ -45,3 +45,30 @@ fun ComposeContentTestRule.scrollListTo(text: String) {
             SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange),
     ).performScrollToNode(androidx.compose.ui.test.hasText(text))
 }
+
+/**
+ * Texts in which a word is broken across lines ("Kohlenhydr" / "ate"): the line ends and the next one
+ * starts without a space or hyphen between them. Nothing is clipped then, but it reads badly, which is
+ * what an over-narrow column does at 200 % font size.
+ */
+fun ComposeContentTestRule.textsWithBrokenWords(): List<String> {
+    val offenders = mutableListOf<String>()
+    onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).fetchSemanticsNodes().forEach { node ->
+        val text = node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ") { it.text } ?: return@forEach
+        val layouts = mutableListOf<TextLayoutResult>()
+        node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
+        val broken = layouts.any { layout ->
+            val content = layout.layoutInput.text.text
+            (0 until layout.lineCount - 1).any { line ->
+                val end = layout.getLineEnd(line)
+                end in 1 until content.length &&
+                    !content[end - 1].isWhitespace() && !content[end].isWhitespace() &&
+                    content[end - 1] !in BREAK_CHARS
+            }
+        }
+        if (broken) offenders += text
+    }
+    return offenders
+}
+
+private const val BREAK_CHARS = "-\u2013/"

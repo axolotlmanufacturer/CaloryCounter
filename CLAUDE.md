@@ -174,11 +174,15 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   Energy inputs are always **kcal**, whatever the display unit.
 - **Undo:** delete = `diary.delete(id)` + event; undo = `diary.restore(entry)` (re-insert with the same id, REPLACE).
   "Von gestern kopieren" = `copyMeal` in one Room transaction, returns the new ids so the copy can be undone.
+  **Only an empty meal is filled** (the button shows only for empty meals, and the repository enforces it, so a double
+  tap cannot duplicate the copy). The spec (7.2) does not say; the user may want it on non-empty meals too.
 - **Heute:** `HorizontalPager` with 73.001 pages (one per day, +-100 years around today); the date bar
   (arrows, picker, "Heute") is a custom top bar. While a row is being swiped away the pager's user scroll is
   off (`rowSwiping`), otherwise a fast full-width swipe also changed the day. `SwipeToDismissBoxState` is
   created with `remember`, **not** `rememberSwipeToDismissBoxState` (that one is saved per list item). "Over target" uses
-  `overTargetColor()` (amber, light/dark), never red.
+  `overTargetColor()` (amber, light/dark), never red. Swipe between days works on the cards and meal headers, not on an
+  entry row (the row's swipe-to-delete takes the gesture); the arrows, the picker and the "Zu heute" icon always work.
+  Screen readers get "Löschen" as a custom action on the focused row (`Surface(onClick)`), not on the swipe container.
 - **Full-screen steps** (`AddFoodRoute`, `QuickEntryRoute`, `PortionRoute`, `CustomFoodRoute`, all `@Serializable`, days as
   epoch days) use `FullScreenScaffold` (own top bar without fixed height, content insets = navigation bar + IME)
   and `BottomActionBar`. ViewModels get their route through Hilt assisted injection:
@@ -233,6 +237,8 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   `hasText(...) and isSelectable()`.
 - 200 % font-scale tests (`DiaryFontScaleTest`) only see composed nodes: scroll lazy-list items into view with
   `scrollListTo(text)` before `clippedTexts()`. The detector was mutation-checked (`maxLines = 1` on an entry name fails it).
+- `textsWithBrokenWords()` (next to `clippedTexts()`) fails tests when a word is split across lines ("Kohlenhydr/ate"):
+  use `FlowRow` (value wraps below the label) instead of two `weight(1f, fill = false)` texts in a `Row`.
 - `:domain` can be tested without the Android SDK: see "Testing `:domain` without the SDK".
 
 ## Testing `:domain` without the SDK
@@ -254,6 +260,9 @@ present after any `./gradlew --version`):
 `gradle -I <repo>/scripts/gradle/maven-central-mirror.init.gradle.kts :domain:test`.
 
 ## Open items for later phases
+
+- Phase 7: form drafts (custom food, Schnelleintrag, amount, onboarding, Profil) live in ViewModel state and are lost when
+  Android kills the process (the route is restored, the typed text is not): back them with `SavedStateHandle`/savers.
 
 - Phase 4: merge food-DB search results, "Favoriten" chip and `food_portions` into `AddFoodViewModel`/`PortionViewModel`
   (the units list and `PortionSubject` are already generic); add the 150 ms search debounce; shared normalization test data.
