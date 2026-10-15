@@ -1,0 +1,109 @@
+bls_code,label,grams,food_name
+F110100,Stück (klein),100,Apfel roh
+F110100,Stück (mittel),150,Apfel roh
+F110100,Stück (groß),200,Apfel roh
+F503100,Stück (mittel),120,Banane roh
+F130100,Stück (mittel),170,Birne roh
+F603100,Stück (mittel),160,Orange roh
+F606100,Stück (mittel),70,Mandarine roh
+F514100,Stück (mittel),75,Kiwi roh
+F301100,Stück (mittel),15,Erdbeere roh
+F310100,Handvoll,80,Weintraube roh
+F203100,Stück (mittel),140,Pfirsich roh
+F220100,Stück (mittel),40,Pflaume roh
+F211100,Handvoll,80,Süßkirsche roh
+F535100,Scheibe,250,Wassermelone roh
+F501100,Scheibe,80,Ananas roh
+F502100,Stück (mittel),150,Avocado roh
+F304100,Handvoll,50,Heidelbeere roh
+F302100,Handvoll,50,Himbeere roh
+G561100,Stück (mittel),100,Tomate roh
+G561100,Stück (klein / Cocktailtomate),15,Tomate roh
+G520100,Stück (mittel),300,Gurke roh
+G620100,Stück (mittel),70,Karotte/Möhre roh
+G480100,Stück (mittel),60,Speisezwiebel roh
+K110100,Stück (mittel),90,Kartoffel geschält roh
+G582100,Stück (mittel),250,Zucchini roh
+G510100,Stück (mittel),250,Aubergine roh
+K701100,Stück (mittel),15,Champignon roh
+G490100,Zehe,3,Knoblauch roh
+G312100,Röschen,25,Broccoli roh
+E111100,Stück (Größe M),55,Hühnerei roh
+E111132,Stück (Größe M),50,Hühnerei gekocht
+Y710142,Stück,60,Spiegelei gebraten
+M111300,"Glas (0,2 l)",200,Vollmilch frisch 3.5 %
+M111300,Tasse,150,Vollmilch frisch 3.5 %
+M113300,"Glas (0,2 l)",200,H-Vollmilch 3.5 %
+M111200,"Glas (0,2 l)",200,Milch fettarm 1.5 %
+M141300,Becher,150,Joghurt mild 3.5 %
+M141300,Esslöffel,15,Joghurt mild 3.5 %
+M713100,Esslöffel,20,Magerquark
+M713100,Becher,250,Magerquark
+Q611000,Portion (aufs Brot),10,Butter
+Q611000,Teelöffel,5,Butter
+M402600,Scheibe,25,Gouda 48 %
+M401600,Scheibe,25,Edamer 45 %
+M602700,Ecke,30,Camembert 50 %
+M032100,Kugel,125,Mozzarella 45 %
+M710700,Portion (aufs Brot),20,Frischkäsezubereitung 50 %
+M173900,Esslöffel,15,Schlagsahne 36 %
+M171500,Portion (Kaffeesahne),10,Kaffeesahne 10 %
+B511000,Stück,50,Weizenbrötchen
+B401000,Stück,60,Vollkornbrötchen
+B271000,Scheibe,45,Roggenmischbrot
+B121000,Scheibe,45,Roggenvollkornbrot
+B311000,Scheibe,30,Weizenbrot/Weißbrot
+B314000,Scheibe,25,Weizentoastbrot
+B6A2100,Scheibe,10,Roggenvollkornknäckebrot
+D771600,Stück,60,Croissant
+C133000,Esslöffel,10,Hafer Flocken
+C133000,Portion (Müsli),40,Hafer Flocken
+C512300,Portion,50,Müslimischung ungesüßt
+C515400,Portion,30,Cornflakes ungesüßt
+C352000,Portion (roh),75,Reis poliert roh
+X820162,Portion (gekocht),180,Reis gekocht
+E401000,Portion (roh),80,Teigwaren eifrei roh
+E401032,Portion (gekocht),200,Teigwaren eifrei gekocht
+C214100,Esslöffel,12,Weizen Mehl Type 405
+S111000,Teelöffel,5,Zucker weiß
+S111000,Esslöffel,15,Zucker weiß
+S120000,Teelöffel,7,Honig
+S120000,Esslöffel,20,Honig
+S132000,Portion (aufs Brot),20,Konfitüre extra
+S145000,Portion (aufs Brot),20,Nuss-Nougat-Creme
+Q120000,Esslöffel,10,Olivenöl
+Q120000,Teelöffel,4,Olivenöl
+Q320000,Esslöffel,10,Sonnenblumenöl
+S539900,Stück (Rippe),5,Vollmilchschokolade
+S539900,Tafel,100,Vollmilchschokolade
+S560000,Stück (Rippe),5,Zartbitter-/Halbbitterschokolade
+S560000,Tafel,100,Zartbitter-/Halbbitterschokolade
+D630400,Stück,4,Butterkekse
+K280100,Portion,30,Kartoffelchips
+S241000,Kugel,50,Vanilleeis
+H110600,Handvoll,30,Erdnuss geröstet
+H210100,Handvoll,30,Mandel süß
+H120100,Handvoll,30,Walnuss
+H130100,Handvoll,30,Haselnuss
+H170100,Handvoll,30,Cashewkern
+W140000,Scheibe,6,Salami
+W424000,Scheibe,20,Schwein Kochschinken
+W211200,Stück,50,Wiener Würstchen
+W310000,Portion (aufs Brot),20,Leberwurst
+V416100,Stück (Filet),150,Hähnchen Brustfilet roh
+T410100,Stück (Filet),150,Lachs roh
+H861000,Portion,100,Tofu
+N330000,"Glas (0,2 l)",200,Colagetränk koffeinhaltig
+N330000,"Dose (0,33 l)",330,Colagetränk koffeinhaltig
+N330000,"Flasche (0,5 l)",500,Colagetränk koffeinhaltig
+P163000,"Glas (0,3 l)",300,Pilsner Bier
+P163000,"Flasche (0,33 l)",330,Pilsner Bier
+P163000,"Flasche (0,5 l)",500,Pilsner Bier
+P2A3000,"Glas (0,125 l)",125,Rotwein trocken
+P210000,"Glas (0,125 l)",125,Weißwein trocken
+F110600,"Glas (0,2 l)",200,Apfelsaft
+F603600,"Glas (0,2 l)",200,Orangensaft
+N410100,Tasse,150,Kaffee (Getränk)
+N414000,Tasse,150,Cappuccino mit Milch 3.5 %
+N411100,Tasse (Espresso),30,Espresso (Getränk)
+N630000,Tasse,200,Schwarztee (Getränk)

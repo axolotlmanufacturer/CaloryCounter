@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- German is the default (and only) locale. All user-facing text lives here (PROMPT.md §2.3). -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="de">
+    <string name="app_name">Kalorienzähler</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_today">Heute</string>
+    <string name="nav_weight">Gewicht</string>
+    <string name="nav_stats">Statistik</string>
+    <string name="nav_profile">Profil</string>
+
+    <!-- Empty states -->
+    <string name="today_empty_title">Dein Tag ist noch leer</string>
+    <string name="today_empty_message">Tippe bei einer Mahlzeit auf das Plus, um etwas einzutragen.</string>
+    <string name="weight_empty_title">Noch keine Gewichtseinträge</string>
+    <string name="weight_empty_message">Hier siehst du deinen Gewichtsverlauf mit Trendlinie und deinen Weg zum Zielgewicht.</string>
+    <string name="stats_empty_title">Noch keine Auswertungen</string>
+    <string name="stats_empty_message">Sobald du ein paar Tage erfasst hast, findest du hier deine Wochen- und Monatsübersicht.</string>
+
+    <!-- Loading -->
+    <string name="loading_description">Wird geladen …</string>
+
+    <!-- Units and value formats (the number is formatted in code) -->
+    <string name="unit_kcal_value">%1$s kcal</string>
+    <string name="unit_kj_value">%1$s kJ</string>
+    <string name="unit_kg_value">%1$s kg</string>
+    <string name="unit_g_value">%1$s g</string>
+
+    <!-- Common actions -->
+    <string name="action_next">Weiter</string>
+    <string name="action_back">Zurück</string>
+    <string name="action_done">Fertig</string>
+    <string name="action_save">Speichern</string>
+    <string name="saved_message">Gespeichert</string>
+    <string name="save_failed_message">Das hat leider nicht geklappt. Bitte versuche es noch einmal.</string>
+
+    <!-- Profile fields -->
+    <string name="field_sex">Geschlecht (für die Formel)</string>
+    <string name="field_sex_hint">Die Berechnung des Grundumsatzes unterscheidet zwischen diesen beiden Werten.</string>
+    <string name="sex_male">Männlich</string>
+    <string name="sex_female">Weiblich</string>
+    <string name="field_birth_date">Geburtsdatum</string>
+    <string name="field_birth_date_hint">TT.MM.JJJJ</string>
+    <string name="field_height">Größe (cm)</string>
+    <string name="field_weight">Aktuelles Gewicht (kg)</string>
+    <string name="field_body_fat">Körperfettanteil in Prozent (optional)</string>
+    <string name="field_body_fat_hint">Nur nötig für die Formel Katch-McArdle.</string>
+    <string name="field_goal_weight">Zielgewicht (kg)</string>
+    <string name="field_goal_weight_min_hint">Mindestens %1$s kg (BMI 18,5)</string>
+    <string name="field_goal_rate">Tempo</string>
+
+    <!-- Activity levels -->
+    <string name="activity_title">Wie aktiv bist du?</string>
+    <string name="activity_hint">Wähle, was im Alltag am besten passt. Im Zweifel wähle die niedrigere Stufe.</string>
+    <string name="activity_sedentary">Kaum aktiv – Bürojob, wenig Bewegung</string>
+    <string name="activity_light">Leicht aktiv – 1–3× Sport pro Woche</string>
+    <string name="activity_moderate">Mäßig aktiv – 3–5× Sport pro Woche</string>
+    <string name="activity_high">Sehr aktiv – 6–7× Sport pro Woche</string>
+    <string name="activity_extreme">Extrem aktiv – körperliche Arbeit + Sport</string>
+
+    <!-- Goal -->
+    <string name="goal_lose">Abnehmen</string>
+    <string name="goal_maintain">Halten</string>
+    <string name="goal_gain">Zunehmen</string>
+    <string name="goal_rate_chip">%1$s kg</string>
+
+    <!-- Formula, macros, display -->
+    <string name="section_formula">Berechnung des Grundumsatzes</string>
+    <string name="formula_mifflin">Mifflin-St Jeor (Standard)</string>
+    <string name="formula_katch">Katch-McArdle (mit Körperfettanteil)</string>
+    <string name="section_macros">Makroziele</string>
+    <string name="macro_mode_default">Standard: Eiweiß 1,6 g pro kg, Fett 30 Prozent</string>
+    <string name="macro_mode_percent">Prozentaufteilung</string>
+    <string name="macro_mode_per_kg">Gramm pro kg Körpergewicht</string>
+    <string name="macro_protein_percent">Eiweiß (Prozent)</string>
+    <string name="macro_carbs_percent">Kohlenhydrate (Prozent)</string>
+    <string name="macro_fat_percent">Fett (Prozent)</string>
+    <string name="macro_protein_per_kg">Eiweiß (g pro kg)</string>
+    <string name="macro_fat_per_kg">Fett (g pro kg)</string>
+    <string name="macro_carbs_remainder_hint">Kohlenhydrate füllen den Rest bis zum Tagesziel.</string>
+    <string name="section_energy_unit">Energieeinheit</string>
+    <string name="energy_unit_kcal">Kilokalorien (kcal)</string>
+    <string name="energy_unit_kj">Kilojoule (kJ)</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_progress">Schritt %1$d von %2$d</string>
+    <string name="onboarding_welcome_title">Willkommen beim Kalorienzähler</string>
+    <string name="onboarding_welcome_body">Hier trägst du ein, was du isst, und siehst, wie du deinem Gewichtsziel näherkommst. Alle Daten bleiben auf deinem Gerät – die App braucht keine Internetverbindung.</string>
+    <string name="onboarding_welcome_hint">Ein paar Fragen, dann berechnen wir deinen Tagesbedarf.</string>
+    <string name="onboarding_food_db_preparing">Lebensmitteldatenbank wird vorbereitet …</string>
+    <string name="onboarding_welcome_start">Los geht\'s</string>
+    <string name="onboarding_basics_title">Über dich</string>
+    <string name="onboarding_body_title">Größe und Gewicht</string>
+    <string name="onboarding_goal_title">Dein Ziel</string>
+    <string name="onboarding_summary_title">Deine Zahlen</string>
+    <string name="onboarding_summary_disclaimer">Alle Werte sind Schätzungen und ersetzen keine ärztliche Beratung. Du kannst alles später im Profil ändern.</string>
+
+    <!-- Plan summary -->
+    <string name="plan_bmr">Grundumsatz</string>
+    <string name="plan_bmr_explanation">Das verbraucht dein Körper in Ruhe, also wenn du den ganzen Tag liegen würdest.</string>
+    <string name="plan_tdee">Gesamtumsatz</string>
+    <string name="plan_tdee_explanation">Grundumsatz plus Bewegung im Alltag und Sport: so viel verbrauchst du etwa pro Tag.</string>
+    <string name="plan_target">Tagesziel</string>
+    <string name="plan_target_lose">Dein Gesamtumsatz minus %1$s pro Tag.</string>
+    <string name="plan_target_gain">Dein Gesamtumsatz plus %1$s pro Tag.</string>
+    <string name="plan_target_maintain">Entspricht deinem Gesamtumsatz, dein Gewicht bleibt ungefähr gleich.</string>
+    <string name="plan_macros">Makroziele pro Tag</string>
+    <string name="plan_macros_values">Eiweiß %1$s · Kohlenhydrate %2$s · Fett %3$s</string>
+    <string name="plan_macros_explanation">Richtwerte, wie sich dein Tagesziel auf Eiweiß, Kohlenhydrate und Fett verteilt.</string>
+    <string name="plan_goal_date">Zielerreichung</string>
+    <string name="plan_goal_date_value">voraussichtlich am %1$s</string>
+    <string name="plan_goal_date_explanation">Berechnet aus deinem Gewichtstrend und dem gewählten Tempo.</string>
+    <string name="plan_goal_reached">Zielgewicht erreicht</string>
+    <string name="plan_goal_reached_explanation">Du bist bei deinem Zielgewicht angekommen. Du kannst im Profil ein neues Ziel wählen.</string>
+    <string name="plan_preview_title">So wird gerechnet</string>
+    <string name="plan_preview_incomplete">Sobald Größe, Gewicht und Geburtsdatum stimmen, siehst du hier deine Zahlen.</string>
+
+    <!-- Hints when the goal is limited by a safety rule -->
+    <string name="goal_not_allowed_hint">Gewichtsziele gibt es erst ab 18 Jahren. Du kannst die App trotzdem als Tagebuch nutzen.</string>
+    <string name="goal_lose_not_offered_hint">Abnehmen steht bei einem BMI unter 18,5 nicht zur Auswahl.</string>
+
+    <!-- Profile screen -->
+    <string name="profile_section_body">Körperdaten</string>
+    <string name="profile_section_activity">Aktivität</string>
+    <string name="profile_section_goal">Ziel</string>
+    <string name="profile_loading_hint">Dein Profil wird geladen …</string>
+    <string name="profile_weight_hint">Ein geändertes Gewicht wird als heutiger Eintrag gespeichert.</string>
+
+    <!-- Notices from the safety rules: neutral, explaining, never blocking silently -->
+    <string name="notice_minor_estimate">Die Formeln für Grund- und Gesamtumsatz sind nicht für Kinder und Jugendliche gemacht. Die Zahlen sind deshalb nur eine grobe Orientierung.</string>
+    <string name="notice_goal_requires_adult">Gewichtsziele sind erst ab 18 Jahren vorgesehen. Dein Tagesziel entspricht deshalb deinem geschätzten Gesamtumsatz.</string>
+    <string name="notice_lose_not_offered">Dein BMI liegt bei %1$s und damit unter 18,5. Deshalb planen wir mit deinem Gesamtumsatz und nicht mit einem Defizit. Zunehmen kannst du jederzeit wählen.</string>
+    <string name="notice_rate_capped">Dein Wunschtempo von %1$s kg pro Woche liegt über 1 %% deines Körpergewichts. Wir begrenzen es auf %2$s kg pro Woche, damit das Abnehmen schonend bleibt.</string>
+    <string name="notice_floor_applied">Mit deinem Profil sind etwa %1$s kg pro Woche realistisch. Unter %2$s kcal am Tag empfehlen wir nicht, deshalb liegt dein Tagesziel bei dieser Untergrenze.</string>
+    <string name="notice_floor_applied_no_loss">Um mit deinem Profil abzunehmen, müsstest du weniger als %1$s kcal am Tag essen. Das empfehlen wir nicht, deshalb liegt dein Tagesziel bei dieser Untergrenze und Abnehmen ist damit aktuell kaum möglich.</string>
+    <string name="notice_target_raised_to_floor">Dein geschätzter Bedarf liegt unter %1$s kcal. Wir setzen dein Tagesziel auf diese Untergrenze.</string>
+    <string name="notice_katch_needs_body_fat">Für die Formel Katch-McArdle brauchen wir deinen Körperfettanteil. Bis dahin rechnen wir mit Mifflin-St Jeor.</string>
+    <string name="notice_protein_reduced">Dein Eiweißziel liegt unter 1,6 g pro kg, damit Eiweiß und Fett in dein Tagesziel passen.</string>
+    <string name="notice_macros_exceed_target">Die gewählten Gramm pro kg brauchen mehr Kalorien als dein Tagesziel. Die Kohlenhydrate sind deshalb auf 0 gesetzt.</string>
+
+    <!-- Input errors -->
+    <string name="error_number">Bitte eine Zahl eingeben, zum Beispiel 72,4.</string>
+    <string name="error_date">Bitte im Format TT.MM.JJJJ eingeben, zum Beispiel 13.10.1990.</string>
+    <string name="error_height_range">Bitte eine Größe zwischen 100 und 250 cm eingeben.</string>
+    <string name="error_weight_range">Bitte ein Gewicht zwischen 30 und 350 kg eingeben.</string>
+    <string name="error_body_fat_range">Bitte einen Wert zwischen 3 und 60 Prozent eingeben.</string>
+    <string name="error_birth_date_future">Das Geburtsdatum liegt in der Zukunft.</string>
+    <string name="error_birth_date_too_young">Die App ist ab 10 Jahren nutzbar. Bitte prüfe das Geburtsdatum.</string>
+    <string name="error_birth_date_too_old">Bitte prüfe das Geburtsdatum.</string>
+    <string name="error_goal_weight_below_bmi">Dein Zielgewicht sollte einem BMI von mindestens 18,5 entsprechen, bei deiner Größe also mindestens %1$s kg.</string>
+    <string name="error_goal_weight_not_below">Zum Abnehmen muss das Zielgewicht unter deinem aktuellen Gewicht liegen.</string>
+    <string name="error_goal_weight_not_above">Zum Zunehmen muss das Zielgewicht über deinem aktuellen Gewicht liegen.</string>
+    <string name="error_katch_needs_body_fat">Für Katch-McArdle brauchst du den Körperfettanteil.</string>
+    <string name="error_percents_sum">Die drei Anteile müssen zusammen 100 Prozent ergeben.</string>
+    <string name="error_macro_values">Bitte gültige Zahlen eingeben.</string>
+
+    <!-- Common words -->
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_delete">Löschen</string>
+    <string name="action_undo">Rückgängig</string>
+    <string name="unit_kcal">kcal</string>
+    <string name="unit_kj">kJ</string>
+    <string name="unit_ml_value">%1$s ml</string>
+    <string name="value_missing">–</string>
+
+    <!-- Meals -->
+    <string name="meal_breakfast">Frühstück</string>
+    <string name="meal_lunch">Mittagessen</string>
+    <string name="meal_dinner">Abendessen</string>
+    <string name="meal_snacks">Snacks</string>
+
+    <!-- Macros -->
+    <string name="macro_protein">Eiweiß</string>
+    <string name="macro_carbs">Kohlenhydrate</string>
+    <string name="macro_fat">Fett</string>
+
+    <!-- Heute: date switcher -->
+    <string name="date_today">Heute</string>
+    <string name="date_yesterday">Gestern</string>
+    <string name="date_tomorrow">Morgen</string>
+    <string name="date_weekday_value">%1$s, %2$s</string>
+    <string name="today_previous_day">Vorheriger Tag</string>
+    <string name="today_next_day">Nächster Tag</string>
+    <string name="today_pick_date">Datum wählen: %1$s</string>
+    <string name="today_jump_to_today">Zu heute springen</string>
+
+    <!-- Heute: ring and macro bars -->
+    <string name="today_target">Ziel</string>
+    <string name="today_eaten">Gegessen</string>
+    <string name="today_ring_remaining">%1$s übrig</string>
+    <string name="today_ring_over">%1$s über dem Ziel</string>
+    <string name="today_ring_eaten">%1$s gegessen</string>
+    <string name="today_ring_description_remaining">Noch %1$s übrig. Ziel %2$s, gegessen %3$s.</string>
+    <string name="today_ring_description_over">%1$s über dem Ziel. Ziel %2$s, gegessen %3$s.</string>
+    <string name="today_ring_description_no_target">Gegessen: %1$s.</string>
+    <string name="macro_progress_value">%1$s von %2$s</string>
+    <plurals name="today_incomplete_macros">
+        <item quantity="one">Bei einem Eintrag fehlen Angaben zu Eiweiß, Kohlenhydraten oder Fett. Die Summen sind deshalb unvollständig.</item>
+        <item quantity="other">Bei %1$d Einträgen fehlen Angaben zu Eiweiß, Kohlenhydraten oder Fett. Die Summen sind deshalb unvollständig.</item>
+    </plurals>
+
+    <!-- Heute: meals and entries -->
+    <string name="today_add_to_meal">%1$s: Lebensmittel hinzufügen</string>
+    <string name="today_copy_yesterday">Von gestern kopieren (%1$d)</string>
+    <string name="today_copy_previous_day">Vom Vortag kopieren (%1$d)</string>
+    <string name="today_entry_deleted">Eintrag gelöscht</string>
+    <plurals name="today_entries_copied">
+        <item quantity="one">Ein Eintrag kopiert</item>
+        <item quantity="other">%1$d Einträge kopiert</item>
+    </plurals>
+    <string name="entry_quick_default_label">Schnelleintrag</string>
+    <string name="entry_details">%1$s · %2$s</string>
+    <string name="entry_amount_labeled">%1$s × %2$s</string>
+
+    <!-- Lebensmittel hinzufügen -->
+    <string name="add_title">Lebensmittel hinzufügen</string>
+    <string name="add_subtitle">%1$s · %2$s</string>
+    <string name="add_search_label">Lebensmittel suchen</string>
+    <string name="add_search_clear">Suche löschen</string>
+    <string name="add_quick_entry">Schnelleintrag</string>
+    <string name="add_quick_entry_hint">Nur Kalorien eintragen, ohne ein Lebensmittel zu wählen</string>
+    <string name="add_create_custom">Eigenes Lebensmittel anlegen</string>
+    <string name="add_chip_recent">Zuletzt</string>
+    <string name="add_chip_favorites">Favoriten</string>
+    <string name="add_chip_custom">Eigene</string>
+    <string name="add_empty_recent">Hier erscheinen die Lebensmittel, die du zuletzt gegessen hast.</string>
+    <string name="add_empty_favorites">Tippe bei einem Lebensmittel auf den Stern, dann findest du es hier wieder.</string>
+    <string name="add_db_preparing">Lebensmitteldatenbank wird vorbereitet …</string>
+    <string name="add_db_failed">Die Lebensmitteldatenbank konnte nicht geladen werden. Eigene Lebensmittel und der Schnelleintrag funktionieren trotzdem.</string>
+    <string name="add_query_too_short">Gib mindestens zwei Buchstaben ein.</string>
+    <string name="add_empty_custom">Du hast noch keine eigenen Lebensmittel. Lege eines an oder nutze den Schnelleintrag.</string>
+    <string name="add_no_results">Nichts gefunden. Du kannst ein eigenes Lebensmittel anlegen oder den Schnelleintrag nutzen.</string>
+    <string name="food_source_custom">Eigene</string>
+    <string name="food_source_bls">BLS</string>
+    <string name="food_source_off">OFF</string>
+    <string name="food_per_100g">%1$s pro 100 g</string>
+    <string name="food_per_100ml">%1$s pro 100 ml</string>
+    <string name="food_edit_description">%1$s bearbeiten</string>
+
+    <!-- Schnelleintrag -->
+    <string name="quick_title">Schnelleintrag</string>
+    <string name="quick_title_edit">Eintrag bearbeiten</string>
+    <string name="quick_label">Bezeichnung (optional)</string>
+    <string name="quick_label_hint">zum Beispiel Kaffee mit Milch</string>
+    <string name="quick_macros_title">Nährwerte (optional)</string>
+    <string name="quick_macros_hint">Leere Felder bleiben unbekannt und werden nicht mitgezählt.</string>
+    <string name="quick_not_found">Dieser Eintrag existiert nicht mehr.</string>
+
+    <!-- Form fields shared by the diary forms -->
+    <string name="field_energy_kcal">Energie (kcal)</string>
+    <string name="field_protein_g">Eiweiß (g)</string>
+    <string name="field_carbs_g">Kohlenhydrate (g)</string>
+    <string name="field_sugar_g">davon Zucker (g)</string>
+    <string name="field_fat_g">Fett (g)</string>
+    <string name="field_fiber_g">Ballaststoffe (g)</string>
+    <string name="field_salt_g">Salz (g)</string>
+    <string name="field_meal">Mahlzeit</string>
+
+    <!-- Eigenes Lebensmittel -->
+    <string name="custom_title_new">Eigenes Lebensmittel</string>
+    <string name="custom_title_edit">Lebensmittel bearbeiten</string>
+    <string name="custom_name">Name</string>
+    <string name="custom_brand">Marke (optional)</string>
+    <string name="custom_barcode">Barcode (optional)</string>
+    <string name="custom_per_unit">Die Angaben gelten für</string>
+    <string name="custom_per_100g">100 g</string>
+    <string name="custom_per_100ml">100 ml</string>
+    <string name="custom_values_title_g">Nährwerte pro 100 g</string>
+    <string name="custom_values_title_ml">Nährwerte pro 100 ml</string>
+    <string name="custom_values_hint">Trage die Werte so ein, wie sie auf der Verpackung stehen. Nur die Energie ist Pflicht, leere Felder bleiben unbekannt.</string>
+    <string name="custom_serving_title">Portion (optional)</string>
+    <string name="custom_serving_g">Eine Portion wiegt (g)</string>
+    <string name="custom_serving_ml">Eine Portion enthält (ml)</string>
+    <string name="custom_delete">Lebensmittel löschen</string>
+    <string name="custom_delete_title">Lebensmittel löschen?</string>
+    <string name="custom_delete_message">„%1$s“ wird gelöscht. Bereits eingetragene Mahlzeiten bleiben unverändert.</string>
+    <string name="custom_not_found">Dieses Lebensmittel existiert nicht mehr.</string>
+
+    <!-- Hints that never block saving -->
+    <string name="warning_title">Bitte prüfen</string>
+    <string name="warning_kcal_mismatch">Aus Eiweiß, Kohlenhydraten und Fett ergeben sich etwa %1$s kcal, eingetragen sind andere Werte. Das ist nur ein Hinweis: Du kannst trotzdem speichern.</string>
+    <string name="warning_energy_above_max">Mehr als 900 kcal pro 100 g oder 100 ml sind nicht möglich. Hast du vielleicht kJ statt kcal eingetragen?</string>
+    <string name="warning_nutrients_exceed">Die Nährwerte ergeben zusammen mehr als 100 g pro 100 g. Bitte prüfe sie noch einmal anhand der Verpackung.</string>
+    <string name="warning_sugar_exceeds_carbs">„Davon Zucker“ ist größer als die Kohlenhydrate. Bitte prüfe die Werte auf der Verpackung.</string>
+
+    <!-- More input errors -->
+    <string name="error_number_range">Diese Zahl ist zu groß oder zu klein. Bitte prüfe sie.</string>
+    <string name="error_barcode">Ein Barcode hat 8 bis 14 Ziffern.</string>
+    <string name="error_too_long">Der Text ist zu lang.</string>
+
+    <!-- Menge und Portion -->
+    <string name="portion_title">Menge wählen</string>
+    <string name="portion_title_edit">Eintrag bearbeiten</string>
+    <string name="portion_amount">Menge</string>
+    <string name="portion_preview">Für diese Menge</string>
+    <string name="portion_approx">ca. %1$s</string>
+    <string name="portion_unit_label">%1$s ≈ %2$s</string>
+    <string name="portion_unit_label_estimated">%1$s ≈ ca. %2$s</string>
+    <string name="portion_estimated_hint">Das Gewicht dieser Einheit ist ein Schätzwert, deshalb sind auch die Werte unten nur ungefähre Angaben.</string>
+    <string name="favorite_add">Zu Favoriten hinzufügen</string>
+    <string name="favorite_remove">Aus Favoriten entfernen</string>
+    <string name="portion_add">Hinzufügen</string>
+    <string name="portion_not_found">Dieser Eintrag existiert nicht mehr.</string>
+    <string name="nutrition_table_g">Nährwerte pro 100 g</string>
+    <string name="nutrition_table_ml">Nährwerte pro 100 ml</string>
+    <string name="nutrition_energy">Energie</string>
+    <string name="nutrition_energy_value">%1$s / %2$s</string>
+    <string name="nutrition_fat">Fett</string>
+    <string name="nutrition_carbs">Kohlenhydrate</string>
+    <string name="nutrition_sugar">davon Zucker</string>
+    <string name="nutrition_fiber">Ballaststoffe</string>
+    <string name="nutrition_protein">Eiweiß</string>
+    <string name="nutrition_salt">Salz</string>
+
+    <!-- Barcode-Scanner (PROMPT.md 7.5) -->
+    <string name="add_scan_barcode">Strichcode scannen</string>
+    <string name="scanner_title">Strichcode scannen</string>
+    <string name="scanner_camera_description">Kameravorschau zum Scannen eines Strichcodes. Du kannst den Code auch unten eintippen.</string>
+    <string name="scanner_aim_hint">Halte den Strichcode in den Rahmen.</string>
+    <string name="scanner_torch_on">Taschenlampe einschalten</string>
+    <string name="scanner_torch_off">Taschenlampe ausschalten</string>
+    <string name="scanner_permission_title">Kamera erlauben?</string>
+    <string name="scanner_permission_rationale">Mit der Kamera liest die App den Strichcode auf Verpackungen. Das Bild wird nur auf deinem Gerät ausgewertet, nicht gespeichert und nirgendwohin gesendet. Ohne Kamera kannst du den Code von Hand eintippen.</string>
+    <string name="scanner_permission_allow">Kamera erlauben</string>
+    <string name="scanner_permission_denied">Die Kamera ist für diese App ausgeschaltet. Du kannst sie in den Einstellungen erlauben oder den Code von Hand eintippen.</string>
+    <string name="scanner_permission_settings">Einstellungen öffnen</string>
+    <string name="scanner_no_camera">Dieses Gerät hat keine Kamera. Du kannst den Code von Hand eintippen.</string>
+    <string name="scanner_manual_title">Code eintippen</string>
+    <string name="scanner_manual_label">Strichcode (Ziffern)</string>
+    <string name="scanner_manual_search">Suchen</string>
+    <string name="scanner_error_digits">Ein Strichcode besteht nur aus Ziffern.</string>
+    <string name="scanner_error_length">Strichcodes haben 8, 12, 13 oder 14 Ziffern.</string>
+    <string name="scanner_error_check_digit">Die Prüfziffer passt nicht. Vielleicht hat sich ein Zahlendreher eingeschlichen?</string>
+    <string name="scanner_looking">Suche nach %1$s …</string>
+    <string name="scanner_not_found_title">Produkt nicht gefunden</string>
+    <string name="scanner_not_found_body">Zum Code %1$s gibt es keinen Eintrag. Du kannst das Produkt selbst anlegen, dann wird es beim nächsten Scan gefunden.</string>
+    <string name="scanner_in_store_hint">Codes, die mit 20 bis 29 beginnen, vergeben Geschäfte selbst, zum Beispiel für abgewogene Ware. Sie stehen in keiner Produktdatenbank.</string>
+    <string name="scanner_database_unavailable">Die Lebensmitteldatenbank konnte nicht geladen werden, es wurden nur deine eigenen Lebensmittel durchsucht.</string>
+    <string name="scanner_create_custom">Eigenes Lebensmittel anlegen</string>
+    <string name="scanner_scan_again">Nochmal scannen</string>
+</resources>
