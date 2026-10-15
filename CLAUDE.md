@@ -33,7 +33,8 @@ The Android build exists from Phase 1 and the data pipeline from Phase 4.
 ./gradlew assembleDebug                # debug APK (packages the sample food DB, 0.8 MB)
 ./gradlew assembleDebug -PfoodDb=full # debug APK with the full food DB (59 MB; out/foods-full.db must exist)
 ./gradlew assembleRelease -PfoodDb=full   # release APK (needs the full food DB + keystore.properties)
-./gradlew connectedDebugAndroidTest    # instrumented tests; needs a device (none in the cloud container)
+./gradlew connectedDebugAndroidTest    # instrumented tests; needs a device (none in the cloud container).
+#   WARNING: AGP UNINSTALLS the app after the run, which deletes its data. Never run it on the phone that holds the real diary.
 ./gradlew :domain:test                 # pure-Kotlin calculators only
 # search speed on the full DB (JVM sanity check, skipped for the sample DB):
 ./gradlew :app:testDebugUnitTest --tests '*FullDatabaseSearchSpeedTest' -PfoodDb=full -i
@@ -43,7 +44,7 @@ cd tools/food-db-builder
 uv venv && uv pip install -r requirements.txt
 .venv/bin/python build_food_db.py --sample 3000   # small dev DB -> out/foods-sample.db (committed)
 .venv/bin/python build_food_db.py                 # full DB -> out/foods-full.db (gitignored; downloads ~1.4 GB into data/raw/)
-.venv/bin/pytest                                  # 169 tests, no network
+.venv/bin/pytest                                  # 204 tests, no network
 
 # Cloud container: install the Android SDK etc. (needs dl.google.com). Runs automatically via
 # the SessionStart hook (.claude/hooks/session-start.sh) in Claude Code cloud sessions.
@@ -198,14 +199,20 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   the Python builder applies the identical function: `tools/food-db-builder/normalize_cases.json` is run by both
   `test_normalize.py` and `TextNormalizerSharedCasesTest` (`:domain` copies it into its test resources).
 - **Food database (Phase 4):** `tools/food-db-builder` builds `foods.db` (BLS 4.0 + Open Food Facts Germany). The full
-  DB has 228,871 foods in 59.1 MB (limit 120 MB); filters and their counts are in `out/foods-full.report.txt` and the README.
+  DB has 228,673 foods in 59.0 MB (limit 120 MB); filters and their counts are in `out/foods-full.report.txt` and the README.
   The builder creates the tables from Room's exported `createSql`/`setupQueries` (identity hash in `room_master_table`,
   `PRAGMA user_version`), so changing a food entity means: bump `FoodDatabase.VERSION`, rebuild both DBs, commit the new
   schema JSON. `test_build_db.py` fails if builder and schema drift apart.
   - **Packaging:** `-PfoodDb=sample` (default) or `full` copies `tools/food-db-builder/out/foods-<x>.db` to
-    `assets/databases/foods.db` through `CopyFoodDbTask` (generated asset dir per variant). Release with the sample logs a
-    warning. Room opens it with `createFromAsset` and `fallbackToDestructiveMigration(dropAllTables = true)` (read-only,
-    no user data in it, so a new asset version simply replaces the copy).
+    `assets/databases/foods.db` through `CopyFoodDbTask` (generated asset dir per variant). A **release** build with the sample
+    fails unless `-PallowSampleRelease` is given (the gate runs `assembleRelease -PallowSampleRelease` when the full DB is not
+    at hand). Room opens it with `createFromAsset` and `fallbackToDestructiveMigration(dropAllTables = true)` (read-only, no
+    user data in it).
+  - **A rebuilt DB replaces the old copy:** Room only re-copies when the file is missing or `user_version` changed, so a
+    rebuild with the same schema would never reach an installed app. The task therefore also writes `assets/databases/foods.db.id`
+    (SHA-256 prefix of the file); `AssetFoodDbContentGuard` compares it with a marker in `noBackupFilesDir` before the first
+    query, deletes the old `foods.db` on a mismatch and sets the marker once the DB opened. Bumping `FoodDatabase.VERSION` is
+    still needed for schema changes only.
   - **Identity:** a food is referenced by `FoodKey(source, ref)`: BLS code, OFF barcode or custom food id. Row ids change
     with every rebuild and are never stored. Diary entries and favorites store the key; entries also snapshot the nutrients.
   - **Ids and ranking:** BLS rows first, then OFF by falling popularity, so `ORDER BY id` is relevance and OFF needs no sort.
@@ -220,15 +227,25 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   - **Status:** `RoomFoodRepository.prepare()` (called from `KalorienzaehlerApp` and the add/onboarding view models) opens the DB
     on `Dispatchers.IO` in the app scope; `status` is Preparing/Ready/Failed. Lookups wait for Preparing; `DefaultFoodCatalog.search`
     does **not** wait: while Preparing it answers from own foods and the view model searches again when the status changes.
-    Failed (e.g. no storage) keeps own foods working and shows a hint. Onboarding shows "Lebensmitteldatenbank wird vorbereitet …".
-  - **Add screen:** chips Zuletzt, Favoriten, Eigene (default: the first non-empty one); `AddFoodState.searching` hides the
-    "no results" hint while the 150 ms debounce/search is pending; a query needs one word of at least 2 letters. Own foods are
-    also found by barcode prefix. The star on the amount screen (`PortionViewModel.isFavorite`) toggles a favorite; entries
+    Failed (e.g. no storage) keeps own foods working and shows a hint; the next `prepare()` (opening the add screen) tries
+    again, lookups never retry. Lists (Zuletzt, Favoriten) skip database foods while it is not Ready and are resolved again
+    when the status changes, so no screen waits for the copy. Onboarding shows "Lebensmitteldatenbank wird vorbereitet …".
+  - **Add screen:** chips Zuletzt, Favoriten, Eigene (a `ChipChoice` radio group; default: the first non-empty one). "Zuletzt"
+    lists the foods of the last 30 days, the one logged **last** first; the search puts foods logged in the last 30 days first,
+    the **most often** logged first (PROMPT.md 5.2). The search is a flow (`FoodCatalog.observeSearch`), so it follows edits
+    of own foods, newly logged foods and the DB status. `AddFoodState.searching` hides the "no results" hint while the 150 ms
+    debounce/search is pending; a query needs one word of at least 2 letters. Own foods are also found by barcode prefix. The star on the amount screen (`PortionViewModel.isFavorite`) toggles a favorite; entries
     without a food (quick entries) have no star.
   - **Tests:** `RoomFoodRepositoryTest`/`ShippedCatalogTest` open the packaged sample DB with Room under Robolectric (JVM twin of
     the instrumented `ShippedFoodDatabaseTest`, which also checks the 150 ms search budget on a full DB). `FakeFoodRepository`
-    mimics the FTS prefix semantics for view-model and flow tests. Measured on the full DB (JVM, whole path incl. ranking):
-    worst of 3 runs 5-38 ms for ten typical queries.
+    mimics the FTS prefix semantics for view-model and flow tests and, like the real repository, suspends lookups while
+    Preparing. Measured on the full DB (JVM, whole path incl. ranking): worst of 3 runs 8-25 ms for ten typical queries,
+    two-letter prefixes included. That needs the docid range in `FoodDao.searchBls/searchOff`: BLS rows have the lowest ids
+    (`food_db_meta.bls_count`), so the FTS index skips the ten thousand OFF rows a prefix like `ka*` would otherwise fetch
+    (78 ms before). The `source` test stays, so a missing meta row only costs speed.
+- **Known limits of Phase 4:** the "ca." flag of an estimated portion is not stored in the diary entry (only the unit label is),
+  it is looked up in the food when an entry is edited, so it disappears if the food or the portion label is gone. A food that
+  was deleted leaves its favorite row behind (invisible, the id is never reused). Both would need a `user.db` migration.
 - **Day sums** are computed in Kotlin (`DiaryMath`) from the day's entries; SQL range sums come with the statistics (Phase 6).
 - The keystore can't live in the ephemeral cloud container. How to handle it is decided in Phase 8.
 

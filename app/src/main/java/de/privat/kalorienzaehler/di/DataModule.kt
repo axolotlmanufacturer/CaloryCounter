@@ -49,8 +49,8 @@ object DataModule {
     @Provides
     @Singleton
     fun provideFoodDatabase(@ApplicationContext context: Context): FoodDatabase =
-        // The food database is a read-only copy of an asset, with no user data in it: when the app brings a new
-        // version, the old copy is simply replaced by a fresh one.
+        // The food database is a read-only copy of an asset, with no user data in it. A new schema version replaces
+        // the copy here; a rebuilt asset with the same schema is caught by FoodDbContentGuard before the first query.
         Room.databaseBuilder(context, FoodDatabase::class.java, FoodDatabase.NAME)
             .createFromAsset(FoodDatabase.ASSET_PATH)
             .fallbackToDestructiveMigration(dropAllTables = true)

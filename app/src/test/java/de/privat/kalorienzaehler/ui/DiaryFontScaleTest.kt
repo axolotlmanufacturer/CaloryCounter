@@ -1,7 +1,13 @@
 package de.privat.kalorienzaehler.ui
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -194,32 +200,62 @@ class DiaryFontScaleTest {
     @Test
     fun theEmptyAddScreenFits() {
         addScreen(AddFoodState(AddMode.RECENT, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Ready))
-        assertNothingClipped("empty Lebensmittel hinzufügen")
+        showsHint(R.string.add_empty_recent, "empty Lebensmittel hinzufügen")
         assertEquals(AddFilter.RECENT, AddFoodState(AddMode.RECENT, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Ready).selectedFilter)
     }
 
     @Test
     fun theEmptyFavoritesHintFits() {
         addScreen(AddFoodState(AddMode.FAVORITES, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Ready))
-        assertNothingClipped("empty Favoriten")
+        showsHint(R.string.add_empty_favorites, "empty Favoriten")
     }
 
     @Test
     fun thePreparingDatabaseHintFits() {
         addScreen(AddFoodState(AddMode.SEARCH, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Preparing), query = "hafer")
-        assertNothingClipped("Datenbank wird vorbereitet")
+        showsHint(R.string.add_db_preparing, "Datenbank wird vorbereitet")
     }
 
     @Test
     fun theFailedDatabaseHintFits() {
         addScreen(AddFoodState(AddMode.SEARCH, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Failed), query = "hafer")
-        assertNothingClipped("Datenbank nicht verfügbar")
+        showsHint(R.string.add_db_failed, "Datenbank nicht verfügbar")
     }
 
     @Test
     fun theTooShortSearchHintAndNoResultsFit() {
         addScreen(AddFoodState(AddMode.SEARCH, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Ready, queryTooShort = true), query = "h")
-        assertNothingClipped("Suche zu kurz")
+        showsHint(R.string.add_query_too_short, "Suche zu kurz")
+    }
+
+    @Test
+    fun noResultsFit() {
+        addScreen(AddFoodState(AddMode.SEARCH, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Ready), query = "xyz")
+        showsHint(R.string.add_no_results, "keine Treffer")
+    }
+
+    @Test
+    fun whileASearchRunsNeitherAnEmptyHintNorStaleResultsAreShown() {
+        addScreen(AddFoodState(AddMode.SEARCH, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Ready, searching = true), query = "hafer")
+        compose.onNodeWithText(string(R.string.add_no_results)).assertDoesNotExist()
+    }
+
+    /** The hint is on screen (scrolled into view if the list is long at 200 %) and not clipped. */
+    private fun showsHint(hint: Int, label: String) {
+        compose.scrollListTo(string(hint))
+        compose.onNodeWithText(string(hint)).assertIsDisplayed()
+        assertNothingClipped(label)
+    }
+
+    @Test
+    fun theFilterChipsAreOneRadioLikeGroup() {
+        addScreen(AddFoodState(AddMode.FAVORITES, emptyList(), EnergyUnit.KCAL, FoodDbStatus.Ready))
+        val radio = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
+        listOf(R.string.add_chip_recent, R.string.add_chip_favorites, R.string.add_chip_custom).forEach { chip ->
+            compose.onNode(hasText(string(chip)) and radio).assertIsDisplayed()
+        }
+        compose.onNode(hasText(string(R.string.add_chip_favorites))).assertIsSelected()
+        compose.onNode(hasText(string(R.string.add_chip_recent))).assertIsNotSelected()
     }
 
     @Test

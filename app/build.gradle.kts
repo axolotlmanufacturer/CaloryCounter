@@ -1,6 +1,7 @@
 import com.android.build.api.artifact.SingleArtifact
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 
@@ -154,7 +155,10 @@ dependencies {
 // --- Food database (PROMPT.md §5.1, §9) ---------------------------------------------------
 // -PfoodDb=sample (default) packages tools/food-db-builder/out/foods-sample.db (committed, small, for
 // development and tests); -PfoodDb=full packages out/foods-full.db (built by build_food_db.py, not
-// committed). The chosen file ends up as assets/databases/foods.db, which Room copies on first launch.
+// committed). The chosen file ends up as assets/databases/foods.db, which Room copies on first launch, next to a
+// content id (assets/databases/foods.db.id, a hash of the file): the app replaces its copy when the id changes, because
+// Room alone would keep an old copy that has the same schema version. A RELEASE build refuses the sample database
+// unless -PallowSampleRelease is given (a gate run that only checks that the release variant builds).
 
 val foodDbChoice = providers.gradleProperty("foodDb").orElse("sample").get()
 if (foodDbChoice != "sample" && foodDbChoice != "full") {
@@ -171,6 +175,12 @@ abstract class CopyFoodDbTask : DefaultTask() {
     @get:Input
     abstract val choice: Property<String>
 
+    @get:Input
+    abstract val releaseBuild: Property<Boolean>
+
+    @get:Input
+    abstract val allowSampleRelease: Property<Boolean>
+
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
@@ -183,9 +193,29 @@ abstract class CopyFoodDbTask : DefaultTask() {
                     "tools/food-db-builder/build_food_db.py (see its README), or build with -PfoodDb=sample.",
             )
         }
+        if (releaseBuild.get() && choice.get() != "full") {
+            if (!allowSampleRelease.get()) {
+                throw GradleException(
+                    "A release build would ship the SAMPLE food database (about 3,000 foods). Build with -PfoodDb=full " +
+                        "(tools/food-db-builder/out/foods-full.db), or add -PallowSampleRelease if this build is only a check.",
+                )
+            }
+            logger.warn("WARNING: this release build packages the SAMPLE food database.")
+        }
         val target = outputDir.get().asFile.resolve("databases/foods.db")
         target.parentFile.mkdirs()
         Files.copy(file.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(1 shl 16)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        val contentId = digest.digest().joinToString("") { "%02x".format(it) }.take(32)
+        outputDir.get().asFile.resolve("databases/foods.db.id").writeText(contentId)
     }
 }
 
@@ -242,12 +272,11 @@ androidComponents {
         val copyFoodDb = tasks.register<CopyFoodDbTask>("copy${variantName}FoodDb") {
             description = "Packages the $foodDbChoice food database as assets/databases/foods.db ($variantName)."
             choice.set(foodDbChoice)
+            releaseBuild.set(variant.buildType == "release")
+            allowSampleRelease.set(providers.gradleProperty("allowSampleRelease").isPresent)
             val dbFile = rootProject.layout.projectDirectory.file("tools/food-db-builder/out/foods-$foodDbChoice.db")
             if (dbFile.asFile.isFile) source.set(dbFile)
             outputDir.set(layout.buildDirectory.dir("generated/foodDb/${variant.name}"))
-            if (variant.buildType == "release" && foodDbChoice != "full") {
-                logger.warn("WARNING: the release build packages the SAMPLE food database. Use -PfoodDb=full for a real release.")
-            }
         }
         variant.sources.assets?.addGeneratedSourceDirectory(copyFoodDb, CopyFoodDbTask::outputDir)
 

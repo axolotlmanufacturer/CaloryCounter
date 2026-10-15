@@ -151,3 +151,83 @@ def test_the_committed_sample_database_is_valid():
         "SELECT COUNT(*) FROM foods JOIN foods_fts ON foods.id = foods_fts.docid WHERE foods_fts MATCH 'kase*'"
     ).fetchone()[0]
     assert hits > 0
+
+
+# --- the whole build, from source files to database ---------------------------------------------------
+
+
+@pytest.fixture
+def sources(tmp_path):
+    """Tiny but real-format source files: a BLS workbook, an OFF CSV + mobile dump and a portions list."""
+    from test_bls_source import HEADER, row as bls_row
+    from test_read_off import CSV_HEADER, csv_row, write_gz
+    import openpyxl
+
+    book = openpyxl.Workbook()
+    sheet = book.active
+    sheet.append(HEADER)
+    sheet.append(bls_row("F110100", "Apfel roh", 58, 0.3, 0.6, 12.4, 11.4, 2.0, 0.0, "-"))
+    sheet.append(bls_row("M402600", "Gouda 48 % Fett i. Tr.", 379, 25.0, 30.0, 0.0, 0.0, 0.0, 1.5, 600))
+    bls_path = tmp_path / "bls.xlsx"
+    book.save(bls_path)
+
+    csv_path = write_gz(
+        tmp_path / "off.csv.gz",
+        [
+            "\t".join(CSV_HEADER),
+            csv_row("4006381333931", "Haferflocken", "en:germany", "372", unique_scans_n="5", brands="Kölln"),
+            csv_row("4008400154329", "Gouda jung", "en:germany", "361", unique_scans_n="90", brands="Rewe &amp; Co"),
+            csv_row("5449000000996", "Cola", "en:germany", "42", unique_scans_n="40", quantity="500 ml",
+                    fat_100g="0", carbohydrates_100g="10.6", proteins_100g="0"),
+            csv_row("40084107", "Honig", "en:germany", "0", protein="", fat_100g="", carbohydrates_100g="", proteins_100g=""),
+        ],
+    )
+    mobile_path = write_gz(tmp_path / "mobile.tsv.gz", ["code\tproduct_name\tquantity\tbrands"])
+    portions_path = tmp_path / "portions.csv"
+    portions_path.write_text(
+        "bls_code,label,grams,food_name\nF110100,Stück (mittel),150,Apfel roh\nNOPE,Stück,10,Gibt es nicht\n",
+        encoding="utf-8",
+    )
+    return dict(bls=bls_path, csv=csv_path, mobile=mobile_path, portions=portions_path, out=tmp_path / "out" / "foods.db")
+
+
+def run_main(sources, *extra):
+    argv = ["--out", str(sources["out"]), "--bls", str(sources["bls"]), "--off-csv", str(sources["csv"]),
+            "--off-mobile", str(sources["mobile"]), "--portions", str(sources["portions"]),
+            "--build-date", "2026-10-13", *extra]
+    return builder.main(argv)
+
+
+def test_the_full_build_ranks_open_food_facts_by_popularity_and_writes_the_meta(sources):
+    assert run_main(sources, "--off-date", "2026-10-12") == 0
+    con = sqlite3.connect(sources["out"])
+    rows = con.execute("SELECT id, source, source_id, name FROM foods ORDER BY id").fetchall()
+    assert [r[1] for r in rows] == ["BLS", "BLS", "OFF", "OFF", "OFF"]
+    # Open Food Facts by falling number of scans: Gouda (90), Cola (40), Haferflocken (5); the honey placeholder is gone.
+    assert [r[2] for r in rows[2:]] == ["4008400154329", "5449000000996", "4006381333931"]
+    assert con.execute("SELECT brand FROM foods WHERE source_id = '4008400154329'").fetchone() == ("Rewe & Co",)
+    assert con.execute("SELECT per_unit FROM foods WHERE source_id = '5449000000996'").fetchone() == ("ml",)
+    portions = con.execute("SELECT COUNT(*) FROM food_portions").fetchone()[0]
+    meta = dict(con.execute("SELECT key, value FROM food_db_meta"))
+    assert meta == {
+        "build_date": "2026-10-13", "bls_version": builder.BLS_VERSION, "off_export_date": "2026-10-12",
+        "bls_count": "2", "off_count": "3", "portion_count": str(portions), "schema_version": "1", "sample": "false",
+    }
+    assert portions == 1
+    # BLS: NACL 0 with sodium "-" is unknown, a measured salt stays.
+    assert con.execute("SELECT salt FROM foods WHERE source_id = 'F110100'").fetchone() == (None,)
+    assert con.execute("SELECT salt FROM foods WHERE source_id = 'M402600'").fetchone() == (1.5,)
+    report = sources["out"].with_suffix(".report.txt").read_text(encoding="utf-8")
+    assert "kept: 3" in report and "final foods: 5" in report
+
+
+def test_a_sample_build_is_marked_as_a_sample_and_may_have_an_unknown_export_date(sources):
+    assert run_main(sources, "--sample", "3", "--off-date", builder.UNKNOWN_DATE) == 0
+    con = sqlite3.connect(sources["out"])
+    assert dict(con.execute("SELECT key, value FROM food_db_meta"))["sample"] == "true"
+
+
+def test_a_full_build_refuses_an_unknown_export_date(sources):
+    with pytest.raises(SystemExit, match="export is unknown"):
+        run_main(sources, "--off-date", builder.UNKNOWN_DATE)
+    assert not sources["out"].exists()

@@ -49,7 +49,7 @@ class ShippedCatalogTest {
             .createFromAsset(FoodDatabase.ASSET_PATH)
             .allowMainThreadQueries()
             .build()
-        val foods = RoomFoodRepository(database, database.foodDao(), scope)
+        val foods = RoomFoodRepository(database.foodDao(), scope, NoFoodDbContentGuard)
         catalog = DefaultFoodCatalog(foods, custom, favorites, diary)
         catalog.prepare()
         // Searches skip the database while it is still being unpacked (the screen searches again when it is ready).
@@ -81,7 +81,8 @@ class ShippedCatalogTest {
 
     @Test
     fun searchResultsAreCappedAt50() = runTest {
-        assertTrue(catalog.search("brot", TEST_TODAY).size <= 50)
+        // "ge" matches hundreds of foods in the sample database.
+        assertEquals(50, catalog.search("ge", TEST_TODAY).size)
     }
 
     @Test

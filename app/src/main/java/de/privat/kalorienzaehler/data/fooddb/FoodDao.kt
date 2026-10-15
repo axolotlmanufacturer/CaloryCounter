@@ -10,23 +10,36 @@ interface FoodDao {
     /**
      * BLS foods matching the full-text [match] expression (e.g. `kase* gouda*`), best first: names that
      * start with [prefix] (the normalized query), then shorter names. The caller re-ranks.
+     *
+     * BLS rows have the lowest ids (`food_db_meta.bls_count` of them), so the full-text index only has to look at
+     * `docid <= bls_count`: a two-letter prefix like `ka*` matches ten thousand Open Food Facts rows that would
+     * otherwise be fetched one by one just to be thrown away. Without the meta row the range is unbounded (slower,
+     * same result); the `source` test keeps the result right either way.
      */
     @Query(
         """
-        SELECT foods.* FROM foods JOIN foods_fts ON foods.id = foods_fts.docid
-        WHERE foods_fts MATCH :match AND foods.source = 'BLS'
+        SELECT foods.* FROM foods_fts JOIN foods ON foods.id = foods_fts.docid
+        WHERE foods_fts MATCH :match
+          AND foods_fts.docid <= COALESCE((SELECT CAST(value AS INTEGER) FROM food_db_meta WHERE key = 'bls_count'), 9223372036854775807)
+          AND foods.source = 'BLS'
         ORDER BY (foods.search_text LIKE :prefix || '%') DESC, LENGTH(foods.name), foods.id
         LIMIT :limit
         """,
     )
     suspend fun searchBls(match: String, prefix: String, limit: Int): List<FoodEntity>
 
-    /** Open Food Facts matches; ids are assigned by falling popularity, so id order is popularity order. */
+    /**
+     * Open Food Facts matches. Ids are assigned by falling popularity after the BLS rows, so docid order is
+     * popularity order, which the full-text index delivers without sorting; it stops after [limit] rows and skips the
+     * BLS range (see [searchBls]).
+     */
     @Query(
         """
-        SELECT foods.* FROM foods JOIN foods_fts ON foods.id = foods_fts.docid
-        WHERE foods_fts MATCH :match AND foods.source = 'OFF'
-        ORDER BY foods.id
+        SELECT foods.* FROM foods_fts JOIN foods ON foods.id = foods_fts.docid
+        WHERE foods_fts MATCH :match
+          AND foods_fts.docid > COALESCE((SELECT CAST(value AS INTEGER) FROM food_db_meta WHERE key = 'bls_count'), 0)
+          AND foods.source = 'OFF'
+        ORDER BY foods_fts.docid
         LIMIT :limit
         """,
     )

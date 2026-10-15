@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +52,7 @@ import de.privat.kalorienzaehler.ui.diary.FullScreenScaffold
 import de.privat.kalorienzaehler.ui.diary.dateLabel
 import de.privat.kalorienzaehler.ui.diary.label
 import de.privat.kalorienzaehler.ui.navigation.AddFoodRoute
+import de.privat.kalorienzaehler.ui.profile.ChipChoice
 import de.privat.kalorienzaehler.ui.profile.HintText
 import de.privat.kalorienzaehler.ui.profile.energyText
 
@@ -172,28 +172,22 @@ fun AddFoodContent(
                 )
             }
             item(key = "chips") {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                ) {
-                    FilterChip(
-                        selected = state?.selectedFilter == AddFilter.RECENT,
-                        onClick = { onSelectFilter(AddFilter.RECENT) },
-                        label = { Text(stringResource(R.string.add_chip_recent)) },
-                    )
-                    FilterChip(
-                        selected = state?.selectedFilter == AddFilter.FAVORITES,
-                        onClick = { onSelectFilter(AddFilter.FAVORITES) },
-                        label = { Text(stringResource(R.string.add_chip_favorites)) },
-                    )
-                    FilterChip(
-                        selected = state?.selectedFilter == AddFilter.CUSTOM,
-                        onClick = { onSelectFilter(AddFilter.CUSTOM) },
-                        label = { Text(stringResource(R.string.add_chip_custom)) },
-                    )
-                }
+                // One group of radio-like chips (exactly one is selected, none while a search runs).
+                ChipChoice(
+                    options = AddFilter.entries,
+                    selected = state?.selectedFilter,
+                    label = { filter ->
+                        stringResource(
+                            when (filter) {
+                                AddFilter.RECENT -> R.string.add_chip_recent
+                                AddFilter.FAVORITES -> R.string.add_chip_favorites
+                                AddFilter.CUSTOM -> R.string.add_chip_custom
+                            },
+                        )
+                    },
+                    onSelect = onSelectFilter,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
             }
             if (state != null) {
                 when (state.dbStatus) {

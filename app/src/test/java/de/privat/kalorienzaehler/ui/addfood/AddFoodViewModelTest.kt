@@ -92,6 +92,35 @@ class AddFoodViewModelTest {
     }
 
     @Test
+    fun theRecentChipShowsTheFoodLoggedLastWhileTheSearchPrefersTheOftenLoggedOnes() = runTest {
+        val oats = testBls("B1", "Haferflocken, Schmelzflocken")
+        val apple = testBls("B2", "Haferschleim Apfel")
+        database.preset(oats, apple)
+        // The oats were logged three times last week, the apple once today.
+        diary.preset(
+            testEntry(createdAtMillis = 1).copy(source = FoodSource.BLS, foodRef = "B1"),
+            testEntry(createdAtMillis = 2).copy(source = FoodSource.BLS, foodRef = "B1"),
+            testEntry(createdAtMillis = 3).copy(source = FoodSource.BLS, foodRef = "B1"),
+            testEntry(createdAtMillis = 9).copy(source = FoodSource.BLS, foodRef = "B2"),
+        )
+        val viewModel = viewModel()
+        assertEquals(listOf("Haferschleim Apfel", "Haferflocken, Schmelzflocken"), viewModel.current().foods.map { it.name })
+        assertEquals(listOf("Haferflocken, Schmelzflocken", "Haferschleim Apfel"), viewModel.search("hafer").foods.map { it.name })
+    }
+
+    @Test
+    fun aFoodLoggedOnlyOnceIsFoundEvenWhenManyOthersWereLoggedMoreOften() = runTest {
+        val staples = (1..150).map { testOff("40000000${it.toString().padStart(5, '0')}", "Standard $it", popularity = 1) }
+        val rare = testOff("4999999999999", "Seltener Sonderriegel", popularity = 0)
+        database.preset(*staples.toTypedArray(), rare)
+        staples.forEach { food ->
+            repeat(2) { diary.preset(testEntry().copy(source = FoodSource.OFF, foodRef = food.key.ref)) }
+        }
+        diary.preset(testEntry().copy(source = FoodSource.OFF, foodRef = rare.key.ref))
+        assertEquals("Seltener Sonderriegel", viewModel().search("sonderriegel").foods.first().name)
+    }
+
+    @Test
     fun aLoggedFoodThatIsGoneIsLeftOut() = runTest {
         diary.preset(testEntry().copy(source = FoodSource.OFF, foodRef = "4000000000000"))
         val state = viewModel().current()
@@ -308,6 +337,55 @@ class AddFoodViewModelTest {
     fun aDatabaseThatFailedToOpenIsReported() = runTest {
         database.setStatus(FoodDbStatus.Failed)
         assertEquals(FoodDbStatus.Failed, viewModel().current().dbStatus)
+    }
+
+    @Test
+    fun aRecentDatabaseFoodDoesNotBlockTheScreenWhileTheDatabaseIsPrepared() = runTest {
+        val gouda = testBls("M110100", "Käse, Gouda")
+        database.preset(gouda)
+        database.setStatus(FoodDbStatus.Preparing)
+        custom.preset(testFood(name = "Haferflocken"))
+        diary.preset(testEntry().copy(source = FoodSource.BLS, foodRef = "M110100", name = "Käse, Gouda"))
+        val viewModel = viewModel()
+        // The screen has its state at once (with the hint), not only when the copy of the database is done. The recent
+        // Gouda cannot be shown yet, so the own foods are listed.
+        val preparing = viewModel.current()
+        assertEquals(FoodDbStatus.Preparing, preparing.dbStatus)
+        assertEquals(AddMode.CUSTOM, preparing.mode)
+        assertEquals(listOf("Haferflocken"), preparing.foods.map { it.name })
+        // Typing finds the own foods meanwhile.
+        assertEquals(listOf("Haferflocken"), viewModel.search("hafer").foods.map { it.name })
+        database.setStatus(FoodDbStatus.Ready)
+        viewModel.selectFilter(AddFilter.RECENT)
+        val ready = viewModel.state.first { it?.dbStatus == FoodDbStatus.Ready && it.foods.isNotEmpty() }
+        assertEquals(listOf("Käse, Gouda"), ready?.foods?.map { it.name })
+    }
+
+    @Test
+    fun aSearchFollowsChangesOfTheOwnFoods() = runTest {
+        val (mine) = custom.preset(testFood(name = "Haferbrei Oma", brand = null, kcal = 100.0))
+        val viewModel = viewModel()
+        val before = viewModel.search("hafer")
+        assertEquals(listOf("Haferbrei Oma"), before.foods.map { it.name })
+        assertEquals(100.0, before.foods.single().kcalPer100, 0.0)
+
+        custom.save(mine.copy(name = "Haferbrei Oma", nutrients = mine.nutrients.copy(kcal = 250.0)))
+        assertEquals(250.0, viewModel.state.first { it?.foods?.firstOrNull()?.kcalPer100 == 250.0 }?.foods?.single()?.kcalPer100)
+
+        custom.delete(mine.id)
+        val after = viewModel.state.first { it?.mode == AddMode.SEARCH && it.foods.isEmpty() && !it.searching }
+        assertEquals(emptyList<Any>(), after?.foods)
+    }
+
+    @Test
+    fun aSearchFindsAFoodThatWasLoggedInTheMeantime() = runTest {
+        val gouda = testBls("M110100", "Käse, Gouda")
+        database.preset(gouda, testBls("M110101", "Käse, Edamer"))
+        val viewModel = viewModel()
+        assertEquals(listOf("Käse, Edamer", "Käse, Gouda"), viewModel.search("kase").foods.map { it.name }.sorted())
+        diary.preset(testEntry().copy(source = FoodSource.BLS, foodRef = "M110100", name = "Käse, Gouda"))
+        // Logged foods lead the search.
+        assertEquals("Käse, Gouda", viewModel.state.first { it?.foods?.firstOrNull()?.name == "Käse, Gouda" }?.foods?.first()?.name)
     }
 
     @Test

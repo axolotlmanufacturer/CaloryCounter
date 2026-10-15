@@ -10,6 +10,9 @@ Column mapping (nutrient code in the header -> database column), all per 100 g:
     FIBT     Ballaststoffe, gesamt          -> fiber
     NACL     Salz (Natriumchlorid)          -> salt   (else NA, Natrium in mg: salt = sodium x 2.5)
 
+BLS computes NACL from the sodium value ("Formelberechnung"); where sodium is not determined (NA is ``-``) it
+writes a 0 into NACL. That 0 is "unknown", not "salt-free", so it becomes NULL.
+
 Cell values: a number is taken as is; ``-`` means "not determined" and becomes NULL; the markers ``<LOD``,
 ``<LOQ`` (below the limit of detection / quantification) and ``TR`` (trace) become 0.
 """
@@ -101,9 +104,11 @@ def read_bls(path: Path) -> list[BlsFood]:
             kcal = values["kcal"]
             if kcal is None:
                 continue
-            salt = values["salt"]
-            if salt is None and values["sodium_mg"] is not None:
-                salt = values["sodium_mg"] / 1000.0 * SODIUM_TO_SALT
+            salt, sodium_mg = values["salt"], values["sodium_mg"]
+            if salt is None and sodium_mg is not None:
+                salt = sodium_mg / 1000.0 * SODIUM_TO_SALT
+            elif salt == 0.0 and sodium_mg is None:
+                salt = None
             clean_name = " ".join(str(name).split())
             foods.append(
                 BlsFood(

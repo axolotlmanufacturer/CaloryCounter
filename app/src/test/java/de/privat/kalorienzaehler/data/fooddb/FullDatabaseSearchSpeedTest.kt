@@ -44,7 +44,7 @@ class FullDatabaseSearchSpeedTest {
             .createFromAsset(FoodDatabase.ASSET_PATH)
             .allowMainThreadQueries()
             .build()
-        repository = RoomFoodRepository(database, database.foodDao(), scope)
+        repository = RoomFoodRepository(database.foodDao(), scope, NoFoodDbContentGuard)
         catalog = DefaultFoodCatalog(repository, FakeCustomFoodRepository(), FakeFavoriteRepository(), FakeDiaryRepository())
         catalog.prepare()
         runBlocking { catalog.dbStatus.first { it != FoodDbStatus.Preparing } }

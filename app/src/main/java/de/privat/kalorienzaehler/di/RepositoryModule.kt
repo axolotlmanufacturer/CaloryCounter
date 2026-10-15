@@ -4,6 +4,8 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import de.privat.kalorienzaehler.data.fooddb.AssetFoodDbContentGuard
+import de.privat.kalorienzaehler.data.fooddb.FoodDbContentGuard
 import de.privat.kalorienzaehler.data.prefs.DataStoreProfileRepository
 import de.privat.kalorienzaehler.data.repository.CustomFoodRepository
 import de.privat.kalorienzaehler.data.repository.DefaultFoodCatalog
@@ -51,4 +53,7 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindFoodCatalog(impl: DefaultFoodCatalog): FoodCatalog
+
+    @Binds
+    abstract fun bindFoodDbContentGuard(impl: AssetFoodDbContentGuard): FoodDbContentGuard
 }

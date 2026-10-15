@@ -17,6 +17,9 @@ interface DiaryRepository {
     /** The foods logged since [since], the most often logged first. */
     fun observeRecentFoods(since: LocalDate, limit: Int): Flow<List<FoodKey>>
 
+    /** The foods logged since [since], the one logged last first. */
+    fun observeLastLoggedFoods(since: LocalDate, limit: Int): Flow<List<FoodKey>>
+
     /** Stores a new entry and returns its id. */
     suspend fun add(entry: DiaryEntry): Long
 

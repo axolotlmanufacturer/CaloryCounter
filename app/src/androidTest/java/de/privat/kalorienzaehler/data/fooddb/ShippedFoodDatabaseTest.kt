@@ -46,7 +46,7 @@ class ShippedFoodDatabaseTest {
         database = Room.databaseBuilder(context, FoodDatabase::class.java, TEST_DB_NAME)
             .createFromAsset(FoodDatabase.ASSET_PATH)
             .build()
-        repository = RoomFoodRepository(database, database.foodDao(), scope)
+        repository = RoomFoodRepository(database.foodDao(), scope, NoFoodDbContentGuard)
     }
 
     @After
@@ -94,7 +94,7 @@ class ShippedFoodDatabaseTest {
         val meta = runBlocking { repository.meta() }
         assumeTrue("only meaningful with -PfoodDb=full", meta["sample"] != "true")
 
-        val queries = listOf("kase", "kase gouda", "haferflocken", "milch", "schokolade riegel", "brot", "joghurt natur", "a b")
+        val queries = listOf("kase", "kase gouda", "haferflocken", "milch", "schokolade riegel", "brot", "joghurt natur", "ka", "coca cola")
         // Warm up the page cache, then take the slowest of three runs per query.
         queries.forEach { search(it) }
         val slowest = queries.associateWith { query ->

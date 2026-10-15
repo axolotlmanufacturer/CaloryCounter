@@ -36,6 +36,18 @@ interface DiaryDao {
     )
     fun observeRecentFoods(since: LocalDate, limit: Int): Flow<List<RecentFoodRow>>
 
+    /** The foods logged since [since], the one logged last first (the "Zuletzt" chip). Quick entries are no foods. */
+    @Query(
+        """
+        SELECT food_source AS source, food_ref AS ref FROM diary_entry
+        WHERE food_source IN ('CUSTOM', 'BLS', 'OFF') AND food_ref IS NOT NULL AND date >= :since
+        GROUP BY food_source, food_ref
+        ORDER BY MAX(created_at) DESC, MAX(id) DESC
+        LIMIT :limit
+        """,
+    )
+    fun observeLastLoggedFoods(since: LocalDate, limit: Int): Flow<List<RecentFoodRow>>
+
     @Query("SELECT * FROM diary_entry WHERE id = :id")
     suspend fun get(id: Long): DiaryEntryEntity?
 

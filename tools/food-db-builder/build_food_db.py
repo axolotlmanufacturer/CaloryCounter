@@ -173,8 +173,16 @@ def table_sizes(path: Path) -> list[tuple[str, int]]:
 # --- orchestration ----------------------------------------------------------------------------------
 
 
+UNKNOWN_DATE = "unbekannt"
+
+
 def build(args: argparse.Namespace) -> list[str]:
     started = time.time()
+    if not args.sample and args.off_date == UNKNOWN_DATE:
+        raise SystemExit(
+            "The date of the Open Food Facts export is unknown: write it to data/raw/off/export_date.txt "
+            "or pass --off-date YYYY-MM-DD (it is shown in \"Über die App\")."
+        )
     schema = load_schema(args.schema)
     portions = read_portions(args.portions)
     report: list[str] = []
@@ -234,7 +242,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--off-mobile", type=Path, default=OFF_MOBILE)
     parser.add_argument("--portions", type=Path, default=PORTIONS_CSV)
     parser.add_argument("--build-date", default=date.today().isoformat())
-    default_off_date = OFF_DATE_FILE.read_text().strip() if OFF_DATE_FILE.exists() else "unbekannt"
+    default_off_date = OFF_DATE_FILE.read_text().strip() if OFF_DATE_FILE.exists() else UNKNOWN_DATE
     parser.add_argument("--off-date", default=default_off_date, help="date of the Open Food Facts export")
     return parser.parse_args(argv)
 

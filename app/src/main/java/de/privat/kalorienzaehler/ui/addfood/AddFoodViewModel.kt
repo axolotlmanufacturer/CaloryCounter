@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -93,15 +93,16 @@ class AddFoodViewModel @AssistedInject constructor(
         catalog.prepare()
     }
 
-    /** Search results for the typed text: after a short pause in typing, and again when the database becomes ready. */
+    /**
+     * Search results for the typed text, after a short pause in typing. The catalog keeps the result up to date: it is
+     * computed again when an own food changes, when something is logged and when the database becomes ready.
+     */
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     private val searchResults: Flow<SearchResult> = queryFlow
         .debounce { text -> if (text.isBlank()) 0L else SEARCH_DEBOUNCE_MS }
         .distinctUntilChanged()
         .flatMapLatest { text ->
-            catalog.dbStatus.flatMapLatest {
-                flow { emit(SearchResult(text, if (text.isBlank()) emptyList() else catalog.search(text, today))) }
-            }
+            if (text.isBlank()) flowOf(SearchResult(text, emptyList())) else catalog.observeSearch(text, today).map { SearchResult(text, it) }
         }
 
     private val lists: Flow<Lists> = combine(

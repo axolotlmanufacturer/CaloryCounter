@@ -12,6 +12,7 @@ kcal and kJ agree, kcal agrees with the macros (only egregious mismatches), then
 
 from __future__ import annotations
 
+import html
 import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -27,7 +28,7 @@ KJ_PER_KCAL = 4.184
 MAX_NAME_LENGTH = 160
 MAX_BRAND_LENGTH = 60
 MAX_SERVING_LABEL_LENGTH = 40
-MAX_SERVING_G = 5000.0
+MAX_SERVING_G = 1000.0  # a "portion" over 1 kg is a whole pack or a typo; the food stays, only the portion goes
 
 # {'lang': de, 'text': Past Vollmilch}, {'lang': fr, ...}: the text ends at "}" before the next entry or the end.
 GERMAN_NAME_PATTERN = r"\{'lang': de, 'text': (.*?)\}(?:, \{'lang'|\]$)"
@@ -89,7 +90,7 @@ class OffFood:
 
 STEP_BARCODE = "valid barcode (8/12/13/14 digits, check digit)"
 STEP_NAME = "has a name"
-STEP_ENERGY = "has an energy value (kcal, else kJ / 4,184)"
+STEP_ENERGY = "has an energy value (kcal, else kJ / 4,184; 0 kcal with no macro stated is a placeholder)"
 STEP_SANITY = "sane values (kcal 0-900, each nutrient 0-100 g, protein + carbs + fat <= 105 g)"
 STEP_KJ = "kcal and kJ do not contradict each other"
 STEP_MACROS = "kcal fits protein/carbs/fat (only egregious mismatches dropped)"
@@ -132,10 +133,21 @@ def parse_number(text: str | None) -> float | None:
     return value if value == value and abs(value) != float("inf") else None
 
 
+def unescape_entities(text: str) -> str:
+    """OFF stores HTML entities (&quot; &amp; &#039;), some of them escaped twice (&amp;amp;): show and index the
+    characters, not the entity names."""
+    for _ in range(3):
+        decoded = html.unescape(text)
+        if decoded == text:
+            break
+        text = decoded
+    return text
+
+
 def clean_text(text: str | None, limit: int) -> str | None:
     if text is None:
         return None
-    cleaned = " ".join(text.split())
+    cleaned = " ".join(unescape_entities(text).split())
     if not cleaned:
         return None
     if len(cleaned) > limit:
@@ -172,6 +184,12 @@ def salt_of(row: RawOffRow) -> float | None:
     return salt
 
 
+def is_placeholder_zero(kcal: float, row: RawOffRow) -> bool:
+    """0 kcal with protein, carbs and fat all missing is OFF's empty default (honey, vodka and cider vinegar show up
+    like this), not a measurement. A real zero-energy food (water, tea) states at least one macro."""
+    return kcal == 0 and all(nutrient(row, a) is None for a in ("protein", "carbs", "fat"))
+
+
 def is_sane(kcal: float, row: RawOffRow) -> bool:
     if not 0 <= kcal <= 900:
         return False
@@ -203,12 +221,20 @@ def fits_macros(kcal: float, row: RawOffRow) -> bool:
     return not (difference > 80 and difference > 0.5 * max(kcal, expected))
 
 
-_QUANTITY = re.compile(r"(\d+(?:[.,]\d+)?)\s*(ml|cl|dl|l|litre|liter|fl\.?\s*oz)\b", re.IGNORECASE)
+_FIGURE = re.compile(
+    r"(\d+(?:[.,]\d+)?)\s*(ml|cl|dl|litre|liter|l|fl\.?\s*oz|g|kg|mg|oz|lb)\b", re.IGNORECASE
+)
+_VOLUMES = {"ml", "cl", "dl", "l", "litre", "liter"}
 
 
 def per_unit_of(quantity: str | None) -> str:
-    """Drinks (quantity in ml, cl, dl or l) are per 100 ml, everything else per 100 g."""
-    return "ml" if quantity and _QUANTITY.search(quantity) else "g"
+    """Drinks (quantity in ml, cl, dl or l) are per 100 ml, everything else per 100 g. With both a weight and a
+    volume ("500 g / 1000 ml") the first figure decides."""
+    match = _FIGURE.search(quantity) if quantity else None
+    if match is None:
+        return "g"
+    unit = re.sub(r"\s+", "", match.group(2).lower().rstrip("."))
+    return "ml" if unit in _VOLUMES or unit.startswith("floz") or unit.startswith("fl.oz") else "g"
 
 
 def pick_brand(brands: str | None) -> tuple[str | None, str | None]:
@@ -241,7 +267,7 @@ def convert(row: RawOffRow, report: FilterReport) -> OffFood | None:
     if name is None:
         return reject(STEP_NAME)
     kcal, kj = pick_energy(row)
-    if kcal is None:
+    if kcal is None or is_placeholder_zero(kcal, row):
         return reject(STEP_ENERGY)
     if not is_sane(kcal, row):
         return reject(STEP_SANITY)

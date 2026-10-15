@@ -60,7 +60,7 @@ no sorting. `source_id` is the stable key (BLS code / barcode) that the diary an
 | `SUGAR` | Zucker (Mono- und Disaccharide), gesamt | `sugar` |
 | `FAT` | Fett | `fat` |
 | `FIBT` | Ballaststoffe, gesamt | `fiber` |
-| `NACL` | Salz (Natriumchlorid) | `salt` (if missing: `NA`, Natrium in mg, × 2,5 / 1000) |
+| `NACL` | Salz (Natriumchlorid) | `salt` (if missing: `NA`, Natrium in mg, × 2,5 / 1000; a `0` where `NA` is `-` is "not determined" and stays NULL) |
 
 Cells: a number is used as is; `-` (not determined) becomes NULL; `<LOD`, `<LOQ`, `<LOD or <LOQ` (below detection) and
 `TR` (trace) become 0. BLS foods are per 100 g (the BLS gives no density for drinks).
@@ -70,7 +70,9 @@ Cells: a number is used as is; `-` (not determined) becomes NULL; `<LOD`, `<LOQ`
 Columns: `energy-kcal_100g` (else `energy-kj_100g` / 4,184), `proteins_100g`, `carbohydrates_100g`, `sugars_100g`,
 `fat_100g`, `fiber_100g`, `salt_100g` (else `sodium_100g` × 2,5), `brands` (the first brand is shown, all are searchable),
 `serving_quantity` / `serving_size` (portion), `unique_scans_n` (popularity). Name: the German name from the mobile dump,
-else the CSV's `product_name`. Drinks (quantity in ml, cl, dl or l) are per 100 ml, everything else per 100 g.
+else the CSV's `product_name`; HTML entities (`&quot;`, `&amp;`, `&#039;`, also escaped twice) are decoded. Drinks are per 100 ml,
+everything else per 100 g; with both a weight and a volume ("500 g / 1000 ml") the first figure decides. A pack portion
+(`serving_quantity`) over 1000 g is dropped (the food stays, it just has no "Portion").
 
 Filters, in this order, each counted in the report (numbers of the 2026-10-13 export):
 
@@ -78,15 +80,18 @@ Filters, in this order, each counted in the report (numbers of the 2026-10-13 ex
 |---|---:|
 | `countries_tags` contains `en:germany` (of 4,535,553) | 408,727 |
 | valid barcode: 8, 12, 13 or 14 digits with a correct check digit | 402,433 |
-| has a name (at least one letter) | 387,041 |
-| has an energy value | 226,206 |
-| sane values: kcal 0–900, every nutrient 0–100 g, protein + carbs + fat ≤ 105 g | 225,705 |
-| kcal and kJ do not contradict each other (more than 50 kcal and 30 % apart: often kJ typed into the kcal field) | 222,187 |
-| kcal fits 4/4/9 kcal per g (+ 7 per g alcohol); only egregious mismatches (> 80 kcal and > 50 %) are dropped | 221,731 |
-| one row per barcode (leading zeros ignored), the most recently modified wins | 221,731 |
+| has a name (at least one letter) | 387,036 |
+| has an energy value (kcal, else kJ / 4,184); **0 kcal with protein, carbs and fat all missing is OFF's empty default** (honey, vodka and cider vinegar show up like this) and counts as missing; a real zero (water) states at least one macro | 226,008 |
+| sane values: kcal 0–900, every nutrient 0–100 g, protein + carbs + fat ≤ 105 g | 225,507 |
+| kcal and kJ do not contradict each other (more than 50 kcal and 30 % apart: often kJ typed into the kcal field) | 221,989 |
+| kcal fits 4/4/9 kcal per g (+ 7 per g alcohol); only egregious mismatches (> 80 kcal and > 50 %) are dropped | 221,533 |
+| one row per barcode (leading zeros ignored), the most recently modified wins | 221,533 |
 
-Result: **228,871 foods (7,140 BLS + 221,731 OFF), 59 MB** (budget: 120 MB). Rows with an energy value but without macros are
+Result: **228,673 foods (7,140 BLS + 221,533 OFF), 59 MB** (budget: 120 MB). Rows with a real energy value but without macros are
 kept; their missing values stay NULL and show as "–".
+
+The build refuses to produce a full database when the export date of the Open Food Facts files is unknown (write it to
+`data/raw/off/export_date.txt` or pass `--off-date`): it is shown in "Über die App".
 
 ## Typical portions (`portions_de.csv`) – estimates, please review
 

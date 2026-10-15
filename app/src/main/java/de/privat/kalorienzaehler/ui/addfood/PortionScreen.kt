@@ -71,7 +71,12 @@ fun PortionScreen(
         isEditing = viewModel.isEditing,
         isLoaded = viewModel.isLoaded,
         notFound = viewModel.notFound,
-        subtitle = stringResource(R.string.add_subtitle, viewModel.meal.label(), dateLabel(viewModel.date, viewModel.today)),
+        // An entry that is gone does not know its meal and day any more: no subtitle then.
+        subtitle = if (viewModel.notFound && viewModel.isEditing) {
+            null
+        } else {
+            stringResource(R.string.add_subtitle, viewModel.meal.label(), dateLabel(viewModel.date, viewModel.today))
+        },
         subject = viewModel.subject,
         amountText = viewModel.amountText,
         amountError = viewModel.amountError,
@@ -97,7 +102,7 @@ fun PortionContent(
     isEditing: Boolean,
     isLoaded: Boolean,
     notFound: Boolean,
-    subtitle: String,
+    subtitle: String?,
     subject: PortionSubject?,
     amountText: String,
     amountError: FormError?,

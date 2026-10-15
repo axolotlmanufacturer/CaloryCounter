@@ -26,6 +26,9 @@ class RoomDiaryRepository @Inject constructor(
     override fun observeRecentFoods(since: LocalDate, limit: Int): Flow<List<FoodKey>> =
         dao.observeRecentFoods(since, limit).map { rows -> rows.map { FoodKey(it.source, it.ref) } }
 
+    override fun observeLastLoggedFoods(since: LocalDate, limit: Int): Flow<List<FoodKey>> =
+        dao.observeLastLoggedFoods(since, limit).map { rows -> rows.map { FoodKey(it.source, it.ref) } }
+
     override suspend fun add(entry: DiaryEntry): Long = dao.insert(entry.toEntity())
 
     override suspend fun update(entry: DiaryEntry) = dao.update(entry.toEntity())

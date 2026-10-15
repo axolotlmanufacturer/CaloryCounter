@@ -201,3 +201,115 @@ def test_ranking_is_by_popularity_then_short_names_then_barcode():
         report,
     )
     assert [f.name for f in rank_by_popularity(foods)] == ["Z", "A", "B lang genug"]
+
+
+# --- review findings (Phase 4) ---------------------------------------------------------------------
+
+
+def test_html_entities_of_open_food_facts_are_decoded_in_names_brands_and_search_text():
+    food, _ = run(
+        name_csv="Chips &quot;fein gesalzen&quot; &amp; Co. -&gt; Nudeln", brands="Ben &amp; Jerry&#039;s, Patak&#039;s"
+    )
+    assert food is not None
+    assert food.name == 'Chips "fein gesalzen" & Co. -> Nudeln'
+    assert (food.brand, food.search_text) == ("Ben & Jerry's", "chips fein gesalzen co nudeln ben jerry s patak s")
+    assert not {"quot", "amp", "039", "gt"} & set(food.search_text.split())
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"kcal": "0", "kj": None, "protein": None, "carbs": None, "fat": None},  # honey with an empty default
+        {"kcal": "0", "kj": "0", "protein": None, "carbs": None, "fat": None},
+        {"kcal": None, "kj": "0", "protein": None, "carbs": None, "fat": None, "sugar": "3"},
+    ],
+)
+def test_zero_kcal_without_any_macro_is_a_placeholder_not_a_measurement(overrides):
+    food, report = run(**overrides)
+    assert food is None and report.rejected[STEP_ENERGY] == 1
+
+
+def test_zero_kcal_with_a_stated_macro_is_a_real_zero():
+    food, _ = run(kcal="0", kj=None, protein=None, carbs="0", fat=None, sugar=None, fiber=None, salt=None)
+    assert food is not None and food.kcal == 0
+    food, _ = run(kcal="0", kj=None, protein="0", carbs=None, fat=None, sugar=None, fiber=None, salt=None)
+    assert food is not None
+
+
+@pytest.mark.parametrize(
+    "overrides, accepted",
+    [
+        ({"protein": "35", "carbs": "40", "fat": "30", "kcal": "400", "kj": None}, True),  # exactly 105 g
+        ({"protein": "35.1", "carbs": "40", "fat": "30", "kcal": "400", "kj": None}, False),  # 105.1 g
+        ({"protein": "0", "carbs": "0", "fat": "100", "kcal": "900", "kj": None}, True),
+        ({"kcal": "900.1", "kj": None}, False),
+        ({"fat": "100", "carbs": "0", "protein": "0", "sugar": "0", "fiber": "0", "salt": "100", "kcal": "900", "kj": None}, True),
+        ({"salt": "100.1"}, False),
+    ],
+)
+def test_the_sanity_limits_hold_exactly_at_their_boundaries(overrides, accepted):
+    food, _ = run(**overrides)
+    assert (food is not None) is accepted
+
+
+NO_MACROS = dict(protein=None, carbs=None, fat=None, sugar=None, fiber=None, salt=None)
+
+
+@pytest.mark.parametrize(
+    "kcal, kj, accepted",
+    [
+        ("300", "1255", True),   # 1255 kJ = 299.96 kcal: they agree
+        ("350", "1255", True),   # 50.04 kcal apart (> 50) but only 14 % of the larger value (< 30 %)
+        ("100", "1255", False),  # 199.96 kcal apart and 67 %
+        ("300", "1760", True),   # 1760 kJ = 420.7 kcal: 120.7 apart, 28.7 % of 420.7 (< 30 %)
+        ("300", "1800", False),  # 1800 kJ = 430.2 kcal: 130.2 apart, 30.3 % of 430.2 (> 30 %)
+        ("20", "230", True),     # 20 vs 55 kcal: 35 apart, under the 50 kcal floor however large the share
+    ],
+)
+def test_kcal_and_kj_boundaries(kcal, kj, accepted):
+    # A contradiction needs BOTH: more than 50 kcal apart and more than 30 % of the larger value.
+    food, report = run(kcal=kcal, kj=kj, **NO_MACROS)
+    assert (food is not None) is accepted
+    assert report.rejected[STEP_KJ] == (0 if accepted else 1)
+
+
+@pytest.mark.parametrize(
+    "kcal, protein, carbs, fat, accepted",
+    [
+        ("0", "20", "0", "0", True),      # macros say 80, label 0: 80 apart is not more than 80
+        ("0", "20.5", "0", "0", False),   # macros say 82: more than 80 and 100 %
+        ("80", "0", "0", "0", True),      # label 80, macros 0: 80 apart
+        ("100", "0", "0", "0", False),    # 100 apart and 100 % of 100
+        ("200", "0", "90", "0", True),    # polyols: macros say 360, 160 apart, but only 44 % of 360 (< 50 %)
+        ("170", "0", "90", "0", False),   # 190 apart and 52.8 % of 360
+    ],
+)
+def test_kcal_versus_macro_boundaries(kcal, protein, carbs, fat, accepted):
+    # Mismatch counts only when more than 80 kcal AND more than 50 % of the larger value.
+    food, report = run(kcal=kcal, kj=None, protein=protein, carbs=carbs, fat=fat, sugar=None, fiber=None, salt=None)
+    assert (food is not None) is accepted
+    assert report.rejected[STEP_MACROS] == (0 if accepted else 1)
+
+
+@pytest.mark.parametrize(
+    "quantity, expected",
+    [("500 g / 1000 ml", "g"), ("300 g / 500 ml", "g"), ("720 ml - 504 g", "ml"), ("400 g (ca. 2 l)", "g"),
+     ("12 fl oz", "ml"), ("16 oz", "g")],
+)
+def test_the_first_figure_of_a_mixed_quantity_decides_the_unit(quantity, expected):
+    assert per_unit_of(quantity) == expected
+
+
+def test_a_pack_over_a_kilogram_is_no_portion_but_the_food_stays():
+    assert pick_serving(raw(serving_quantity="1000", serving_size="1 Dose")) == (1000.0, "1 Dose")
+    assert pick_serving(raw(serving_quantity="1000.1", serving_size="1 Pack")) == (None, None)
+    assert pick_serving(raw(serving_quantity="3200", serving_size="1 Glas (3200 g)")) == (None, None)
+    food, report = run(serving_quantity="3200", serving_size="1 Glas")
+    assert food is not None and food.serving_g is None and food.serving_label is None and report.kept == 1
+
+
+def test_entities_that_were_escaped_twice_are_decoded_too():
+    food, _ = run(name_csv="Wavy Blends Garlic &amp;amp; Herbs", brands="Gouda&amp;#039;s Glorie")
+    assert food is not None
+    assert (food.name, food.brand) == ("Wavy Blends Garlic & Herbs", "Gouda's Glorie")
+    assert food.search_text == "wavy blends garlic herbs gouda s glorie"

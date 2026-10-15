@@ -1,7 +1,7 @@
 package de.privat.kalorienzaehler.data.repository
 
 import de.privat.kalorienzaehler.data.fooddb.FoodDao
-import de.privat.kalorienzaehler.data.fooddb.FoodDatabase
+import de.privat.kalorienzaehler.data.fooddb.FoodDbContentGuard
 import de.privat.kalorienzaehler.data.fooddb.FoodDbStatus
 import de.privat.kalorienzaehler.data.fooddb.toDomain
 import de.privat.kalorienzaehler.di.ApplicationScope
@@ -9,7 +9,6 @@ import de.privat.kalorienzaehler.domain.diary.Food
 import de.privat.kalorienzaehler.domain.diary.FoodKey
 import de.privat.kalorienzaehler.domain.diary.FoodPortion
 import de.privat.kalorienzaehler.domain.diary.FoodSource
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -22,34 +21,53 @@ import kotlinx.coroutines.launch
 
 @Singleton
 class RoomFoodRepository @Inject constructor(
-    private val database: FoodDatabase,
     private val dao: FoodDao,
     @ApplicationScope private val scope: CoroutineScope,
+    private val contentGuard: FoodDbContentGuard,
 ) : FoodRepository {
 
     private val mutableStatus = MutableStateFlow<FoodDbStatus>(FoodDbStatus.Preparing)
     override val status: StateFlow<FoodDbStatus> = mutableStatus
 
-    private val started = AtomicBoolean(false)
+    private val lock = Any()
+    private var started = false
+    private var running = false
 
-    override fun prepare() {
-        if (!started.compareAndSet(false, true)) return
+    /**
+     * Opens the database in the background. The first call starts it; a later call starts it again only after it
+     * failed (e.g. no free storage), so reopening the add screen after making room works without restarting the app.
+     */
+    override fun prepare() = start(retryAfterFailure = true)
+
+    private fun start(retryAfterFailure: Boolean) {
+        synchronized(lock) {
+            val allowed = !started || (retryAfterFailure && mutableStatus.value == FoodDbStatus.Failed)
+            if (running || !allowed) return
+            started = true
+            running = true
+            mutableStatus.value = FoodDbStatus.Preparing
+        }
         scope.launch(Dispatchers.IO) {
-            mutableStatus.value = try {
+            val result = try {
+                contentGuard.discardStaleCopy()
                 // The first query makes Room copy the asset and validate it against the schema.
                 dao.count()
+                contentGuard.markCurrent()
                 FoodDbStatus.Ready
             } catch (cancelled: CancellationException) {
+                synchronized(lock) { running = false }
                 throw cancelled
             } catch (_: Exception) {
                 FoodDbStatus.Failed
             }
+            synchronized(lock) { running = false }
+            mutableStatus.value = result
         }
     }
 
     /** Waits for the database; `false` if it cannot be used. */
     private suspend fun ready(): Boolean {
-        prepare()
+        start(retryAfterFailure = false)
         return mutableStatus.first { it != FoodDbStatus.Preparing } == FoodDbStatus.Ready
     }
 

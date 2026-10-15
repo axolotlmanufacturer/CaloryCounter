@@ -43,7 +43,7 @@ class RoomFoodRepositoryTest {
             .createFromAsset(FoodDatabase.ASSET_PATH)
             .allowMainThreadQueries()
             .build()
-        repository = RoomFoodRepository(database, database.foodDao(), scope)
+        repository = RoomFoodRepository(database.foodDao(), scope, NoFoodDbContentGuard)
     }
 
     @After
@@ -109,6 +109,33 @@ class RoomFoodRepositoryTest {
     }
 
     @Test
+    fun theDocidRangeIsOnlyAShortcutTheResultIsTheSameWithoutTheBlsCount() = runTest {
+        val queries = listOf("ka", "ge", "milch", "hafer koelln", "apfel")
+        suspend fun snapshot() = queries.map { q ->
+            val match = FoodSearch.matchExpression(q)!!
+            val prefix = FoodSearch.normalizedPrefix(q)
+            repository.searchBls(match, prefix, 120).map { it.id } to repository.searchOff(match, 120).map { it.id }
+        }
+        val withCount = snapshot()
+        assertTrue(withCount.all { (bls, off) -> bls.size <= 120 && off.size <= 120 })
+        assertTrue("two-letter prefixes find plenty", withCount[0].first.isNotEmpty() && withCount[0].second.isNotEmpty())
+        database.openHelper.writableDatabase.execSQL("DELETE FROM food_db_meta WHERE key = 'bls_count'")
+        assertEquals(withCount, snapshot())
+    }
+
+    @Test
+    fun blsAndOpenFoodFactsNeverMix() = runTest {
+        for (q in listOf("ka", "ge", "ba", "milch", "brot")) {
+            val match = FoodSearch.matchExpression(q)!!
+            val bls = repository.searchBls(match, q, 500)
+            val off = repository.searchOff(match, 500)
+            assertTrue(q, bls.all { it.key.source == FoodSource.BLS } && off.all { it.key.source == FoodSource.OFF })
+            assertEquals(q, off.map { it.id }.sorted(), off.map { it.id })
+            assertTrue(q, bls.isEmpty() || off.isEmpty() || bls.maxOf { it.id } < off.minOf { it.id })
+        }
+    }
+
+    @Test
     fun aFoodIsLoadedByItsStableKey() = runTest {
         val apple = repository.get(FoodKey(FoodSource.BLS, "F110100"))
         assertNotNull(apple)
@@ -121,11 +148,21 @@ class RoomFoodRepositoryTest {
     }
 
     @Test
-    fun unknownNutrientsStayUnknown() = runTest {
-        // No BLS row invents values: whatever is missing is null, never 0 by default.
-        val all = repository.searchBls(FoodSearch.matchExpression("brot")!!, "brot", 200)
-        assertTrue(all.isNotEmpty())
-        assertTrue(all.all { it.nutrients.kcal >= 0.0 })
+    fun unknownNutrientsStayUnknownAndAreNeverZero() = runTest {
+        // A syrup of which Open Food Facts states the energy but not the protein, and a BLS additive without fat.
+        val syrup = checkNotNull(repository.get(FoodKey(FoodSource.OFF, "3265266075019")))
+        assertEquals("Sirop de grenadine", syrup.name)
+        assertNull(syrup.nutrients.protein)
+        val additive = checkNotNull(repository.get(FoodKey(FoodSource.BLS, "R411000")))
+        assertNull(additive.nutrients.fat)
+        // Whatever is NULL in the database arrives as null, for any food, not only the two above.
+        val refs = database.openHelper.readableDatabase
+            .query("SELECT source_id FROM foods WHERE source = 'OFF' AND protein IS NULL LIMIT 40")
+            .use { cursor -> generateSequence { if (cursor.moveToNext()) cursor.getString(0) else null }.toList() }
+        assertTrue("the sample has foods without a protein value", refs.isNotEmpty())
+        val loaded = repository.getAll(FoodSource.OFF, refs)
+        assertEquals(refs.size, loaded.size)
+        assertTrue(loaded.all { it.nutrients.protein == null })
     }
 
     @Test
@@ -167,7 +204,7 @@ class RoomFoodRepositoryTest {
         val broken = Room.databaseBuilder(context, FoodDatabase::class.java, "broken-foods.db")
             .createFromAsset("databases/does-not-exist.db")
             .build()
-        val failing = RoomFoodRepository(broken, broken.foodDao(), scope)
+        val failing = RoomFoodRepository(broken.foodDao(), scope, NoFoodDbContentGuard)
         try {
             failing.prepare()
             assertEquals(FoodDbStatus.Failed, failing.status.first { it != FoodDbStatus.Preparing })

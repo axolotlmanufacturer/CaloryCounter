@@ -2,6 +2,7 @@ package de.privat.kalorienzaehler.ui.addfood
 
 import app.cash.turbine.test
 import de.privat.kalorienzaehler.data.repository.DefaultFoodCatalog
+import de.privat.kalorienzaehler.data.repository.FavoriteRepository
 import de.privat.kalorienzaehler.domain.diary.FoodKey
 import de.privat.kalorienzaehler.domain.diary.FoodPortion
 import de.privat.kalorienzaehler.domain.diary.FoodSource
@@ -25,6 +26,7 @@ import de.privat.kalorienzaehler.testing.testOff
 import de.privat.kalorienzaehler.testing.testQuickEntry
 import de.privat.kalorienzaehler.ui.navigation.PortionRoute
 import de.privat.kalorienzaehler.ui.navigation.PortionTarget
+import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -336,11 +338,10 @@ class PortionViewModelTest {
     @Test
     fun aFavoriteThatCannotBeStoredIsReported() = runTest {
         val food = foods.preset(testFood()).single()
-        val viewModel = logging(food.id)
-        val failing = object : de.privat.kalorienzaehler.data.repository.FavoriteRepository by favorites {
-            override suspend fun setFavorite(key: FoodKey, favorite: Boolean) = throw java.io.IOException("disk full")
+        val failing = object : FavoriteRepository by favorites {
+            override suspend fun setFavorite(key: FoodKey, favorite: Boolean) = throw IOException("disk full")
         }
-        val failingViewModel = PortionViewModel(
+        val viewModel = PortionViewModel(
             PortionRoute(PortionTarget.NewFromFood(FoodSource.CUSTOM, food.id.toString(), TEST_TODAY.toEpochDay(), Meal.SNACKS)),
             DefaultFoodCatalog(database, foods, favorites, diary),
             failing,
@@ -348,11 +349,30 @@ class PortionViewModelTest {
             profiles,
             TEST_CLOCK,
         )
-        failingViewModel.events.test {
-            failingViewModel.toggleFavorite()
+        viewModel.events.test {
+            viewModel.toggleFavorite()
             assertEquals(FormEvent.FAILED, awaitItem())
         }
+        // The star did not change, and nothing was stored.
         assertEquals(false, viewModel.isFavorite)
+        assertEquals(emptySet<FoodKey>(), favorites.stored)
+    }
+
+    @Test
+    fun aFoodThatIsGoneStillKnowsTheMealAndDayItWasOpenedFor() {
+        val viewModel = logging(FoodKey(FoodSource.OFF, "4999999999999"), Meal.ABENDESSEN)
+        assertTrue(viewModel.notFound)
+        assertEquals(Meal.ABENDESSEN, viewModel.meal)
+        assertEquals(TEST_TODAY, viewModel.date)
+    }
+
+    @Test
+    fun anEntryOfADeletedOwnFoodCanBeEditedButNotStarred() {
+        val entry = diary.preset(testEntry().copy(foodRef = "999")).single() // no own food with this id
+        val viewModel = editing(entry.id)
+        assertTrue(viewModel.isLoaded)
+        assertNull(viewModel.isFavorite)
+        assertNull(viewModel.subject?.key)
     }
 
     @Test

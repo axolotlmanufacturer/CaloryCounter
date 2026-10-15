@@ -144,13 +144,14 @@ class PortionViewModel @AssistedInject constructor(
 
     private suspend fun loadFood(target: PortionTarget.NewFromFood) {
         val key = FoodKey(target.source, target.ref)
+        // The route knows the meal and the day even if the food is gone: the title bar can still say where it was for.
+        meal = target.meal
+        date = LocalDate.ofEpochDay(target.epochDay)
         val food = catalog.load(key)
         if (food == null) {
             notFound = true
             return
         }
-        meal = target.meal
-        date = LocalDate.ofEpochDay(target.epochDay)
         val units = food.units()
         subject = PortionSubject(key, food.name, food.brand, food.perUnit, food.nutrients, units, showTable = true)
         // The pack's own portion is the natural first choice; otherwise start at 100 g/ml.
@@ -169,11 +170,13 @@ class PortionViewModel @AssistedInject constructor(
         meal = entry.meal
         date = entry.date
         val perUnit = if (entry.unit == PerUnit.MILLILITER.code) PerUnit.MILLILITER else PerUnit.GRAM
-        val key = entry.foodRef?.takeIf { entry.source != FoodSource.QUICK }?.let { FoodKey(entry.source, it) }
+        val foodKey = entry.foodRef?.takeIf { entry.source != FoodSource.QUICK }?.let { FoodKey(entry.source, it) }
+        val food = foodKey?.let { catalog.load(it) }
         // The unit keeps what it was logged as; whether its weight was an estimate comes from the food, if it is still there.
-        val estimated = key?.let { catalog.load(it) }?.units()?.firstOrNull { it.key == entry.unit }?.estimated ?: false
+        val estimated = food?.units()?.firstOrNull { it.key == entry.unit }?.estimated ?: false
         subject = PortionSubject(
-            key = key,
+            // A food that is gone (deleted own food) cannot be starred: that favorite would be invisible.
+            key = foodKey.takeIf { food != null },
             name = entry.name,
             brand = entry.brand,
             perUnit = perUnit,

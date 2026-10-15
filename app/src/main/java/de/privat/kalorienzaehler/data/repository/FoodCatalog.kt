@@ -22,7 +22,7 @@ interface FoodCatalog {
     /** All own foods, alphabetically. */
     fun observeCustom(): Flow<List<FoodHit>>
 
-    /** The foods logged since [since], the most often logged first. */
+    /** The foods logged since [since], the one logged last first ("Zuletzt"). */
     fun observeRecent(since: LocalDate, limit: Int): Flow<List<FoodHit>>
 
     /** The favorites, alphabetically. */
@@ -30,8 +30,13 @@ interface FoodCatalog {
 
     /**
      * Foods for the typed [query], ranked (PROMPT.md section 5.2): own and recently logged foods first, then BLS,
-     * then Open Food Facts by popularity. Empty if the query is too short to search.
+     * then Open Food Facts by popularity. Empty if the query is too short to search. The result is a flow: it is
+     * computed again when an own food or the diary changes, or when the food database becomes ready, and while the
+     * database is still being unpacked it holds the own foods alone.
      */
+    fun observeSearch(query: String, today: LocalDate): Flow<List<FoodHit>>
+
+    /** The first result of [observeSearch]. */
     suspend fun search(query: String, today: LocalDate): List<FoodHit>
 
     /** The food with everything the amount screen needs, or `null` if it no longer exists. */

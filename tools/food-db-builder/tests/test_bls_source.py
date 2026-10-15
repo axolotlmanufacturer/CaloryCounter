@@ -98,3 +98,16 @@ def test_names_are_cleaned_and_normalized(workbook):
 def test_a_table_without_the_needed_columns_is_an_error():
     with pytest.raises(ValueError, match="missing nutrient columns"):
         find_columns(("BLS Code", "Lebensmittelbezeichnung", "ENERCC Energie [kcal/100g]"))
+
+
+def test_a_salt_of_zero_where_sodium_is_not_determined_is_unknown(workbook):
+    # BLS writes 0 into NACL when it could not compute it from sodium (NA is "-"): that is "unknown", not "salt-free".
+    path = workbook(
+        row("A", "Berechnet ohne Natrium", 10, 1, 1, 1, 1, 1, 0, "-"),
+        row("B", "Natrium bestimmt, Salz null", 10, 1, 1, 1, 1, 1, 0, 0),
+        row("C", "Salz gemessen", 10, 1, 1, 1, 1, 1, 0.4, "-"),
+    )
+    foods = {f.code: f for f in read_bls(path)}
+    assert foods["A"].salt is None
+    assert foods["B"].salt == 0.0
+    assert foods["C"].salt == 0.4

@@ -27,6 +27,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 /** The "today" of all UI tests: Tuesday, 13 October 2026. */
@@ -120,6 +121,20 @@ class FakeDiaryRepository @Inject constructor() : DiaryRepository {
             .sortedWith(
                 compareByDescending<Map.Entry<FoodKey, List<DiaryEntry>>> { it.value.size }
                     .thenByDescending { row -> row.value.maxOf { it.createdAtMillis } }
+                    .thenByDescending { row -> row.value.maxOf { it.id } },
+            )
+            .take(limit)
+            .map { it.key }
+    }
+
+    /** Like the real query: the food logged last first. */
+    override fun observeLastLoggedFoods(since: LocalDate, limit: Int): Flow<List<FoodKey>> = entries.map { all ->
+        all.values
+            .filter { it.source != FoodSource.QUICK && it.foodRef != null && !it.date.isBefore(since) }
+            .groupBy { FoodKey(it.source, it.foodRef!!) }
+            .entries
+            .sortedWith(
+                compareByDescending<Map.Entry<FoodKey, List<DiaryEntry>>> { row -> row.value.maxOf { it.createdAtMillis } }
                     .thenByDescending { row -> row.value.maxOf { it.id } },
             )
             .take(limit)
@@ -262,16 +277,19 @@ class FakeFoodRepository @Inject constructor() : FoodRepository {
             .take(limit)
     }
 
-    override suspend fun get(key: FoodKey): Food? =
-        if (mutableStatus.value != FoodDbStatus.Ready) null else foods.firstOrNull { it.key == key }
+    /** Like the real repository: lookups wait while the database is being prepared, and find nothing if it failed. */
+    private suspend fun ready(): Boolean = mutableStatus.first { it != FoodDbStatus.Preparing } == FoodDbStatus.Ready
+
+    override suspend fun get(key: FoodKey): Food? = if (ready()) foods.firstOrNull { it.key == key } else null
 
     override suspend fun getAll(source: FoodSource, refs: List<String>): List<Food> =
-        if (mutableStatus.value != FoodDbStatus.Ready) emptyList() else foods.filter { it.key.source == source && it.key.ref in refs }
+        if (refs.isEmpty() || !ready()) emptyList() else foods.filter { it.key.source == source && it.key.ref in refs }
 
     override suspend fun findByBarcodes(barcodes: List<String>): Food? =
-        foods.firstOrNull { it.barcode in barcodes }
+        if (barcodes.isEmpty() || !ready()) null else foods.firstOrNull { it.barcode in barcodes }
 
-    override suspend fun portions(food: Food): List<FoodPortion> = portionsByFood["${food.key.source}:${food.key.ref}"].orEmpty()
+    override suspend fun portions(food: Food): List<FoodPortion> =
+        if (ready()) portionsByFood["${food.key.source}:${food.key.ref}"].orEmpty() else emptyList()
 
     override suspend fun meta(): Map<String, String> = emptyMap()
 }
