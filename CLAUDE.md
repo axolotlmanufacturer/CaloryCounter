@@ -294,6 +294,8 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
   `scrollListTo(text)` before `clippedTexts()`. The detector was mutation-checked (`maxLines = 1` on an entry name fails it).
 - Searches in UI tests start after a debounce: wait with `compose.waitUntil { onAllNodesWithText(...) ... }` (see
   `waitForFood` in `DiaryFlowTest`); in view-model tests `runTest` skips the delay (virtual time), use `advanceTimeBy`/`runCurrent`.
+- Sending files to the user is limited to 30 MiB: the debug APK with the full food DB is 41.6 MB (release: 26.7 MB), so send it in
+  parts (`split -b 20M -d -a 3 --numeric-suffixes=1`, joined with `cat`) next to the 14 MB sample-DB APK.
 - `ShippedCatalogTest` must wait for `FoodDbStatus.Ready` before searching, because the catalog skips the DB while Preparing.
 - `textsWithBrokenWords()` (next to `clippedTexts()`) fails tests when a word is split across lines ("Kohlenhydr/ate"):
   use `FlowRow` (value wraps below the label) instead of two `weight(1f, fill = false)` texts in a `Row`.
