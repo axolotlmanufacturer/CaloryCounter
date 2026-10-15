@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import de.privat.kalorienzaehler.data.repository.RoomFoodRepository
+import de.privat.kalorienzaehler.domain.barcode.BarcodeNormalizer
+import de.privat.kalorienzaehler.domain.barcode.BarcodeParse
 import de.privat.kalorienzaehler.domain.diary.FoodKey
 import de.privat.kalorienzaehler.domain.diary.FoodSearch
 import de.privat.kalorienzaehler.domain.diary.FoodSource
@@ -84,6 +86,18 @@ class ShippedFoodDatabaseTest {
         val apple = runBlocking { repository.get(FoodKey(FoodSource.BLS, "F110100")) }
         assertNotNull(apple)
         assertEquals("Apfel roh", apple!!.name)
+    }
+
+    @Test
+    fun aBarcodeIsFoundUnderItsEan13AndItsGtin14Spelling() {
+        repository.prepare()
+        assertEquals(FoodDbStatus.Ready, ready())
+        for (typed in listOf("4000540000108", "04000540000108")) {
+            val barcode = (BarcodeNormalizer.fromManualEntry(typed) as BarcodeParse.Valid).barcode
+            val food = runBlocking { repository.findByBarcodes(barcode.lookupCodes) }
+            assertNotNull(typed, food)
+            assertEquals(FoodKey(FoodSource.OFF, "4000540000108"), food!!.key)
+        }
     }
 
     /** The full database must answer typical queries in under 150 ms (PROMPT.md §5.2). */

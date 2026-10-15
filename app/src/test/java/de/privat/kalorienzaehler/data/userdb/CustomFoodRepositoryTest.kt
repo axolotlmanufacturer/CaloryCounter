@@ -125,6 +125,23 @@ class CustomFoodRepositoryTest {
     }
 
     @Test
+    fun aFoodIsFoundUnderAnySpellingOfItsBarcode() = runTest {
+        val id = foods.save(food("Mit Code", barcode = "036000291452"))
+        foods.save(food("Ohne Code"))
+        foods.save(food("Anderer Code", barcode = "4006381333931"))
+        assertEquals(id, foods.findByBarcodes(listOf("0036000291452", "036000291452", "00036000291452"))?.id)
+        assertNull(foods.findByBarcodes(listOf("4999999999994")))
+        assertNull(foods.findByBarcodes(emptyList()))
+    }
+
+    @Test
+    fun theOldestFoodWinsWhenTwoShareACode() = runTest {
+        val first = foods.save(food("Erstes", barcode = "4006381333931"))
+        foods.save(food("Zweites", barcode = "4006381333931"))
+        assertEquals(first, foods.findByBarcodes(listOf("4006381333931"))?.id)
+    }
+
+    @Test
     fun deleteEverythingRemovesAllFoods() = runTest {
         foods.save(food("A"))
         foods.save(food("B"))

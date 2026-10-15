@@ -4,8 +4,12 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import de.privat.kalorienzaehler.data.repository.BarcodeLookup
 import de.privat.kalorienzaehler.data.repository.DefaultFoodCatalog
 import de.privat.kalorienzaehler.data.repository.RoomFoodRepository
+import de.privat.kalorienzaehler.domain.barcode.Barcode
+import de.privat.kalorienzaehler.domain.barcode.BarcodeNormalizer
+import de.privat.kalorienzaehler.domain.barcode.BarcodeParse
 import de.privat.kalorienzaehler.domain.diary.FoodKey
 import de.privat.kalorienzaehler.domain.diary.FoodSource
 import de.privat.kalorienzaehler.domain.diary.PerUnit
@@ -129,6 +133,44 @@ class ShippedCatalogTest {
         assertEquals(listOf(false, true, true, true), apple.units().map { it.estimated })
         assertNull(catalog.load(FoodKey(FoodSource.BLS, "NOPE")))
         assertNull(catalog.load(FoodKey(FoodSource.CUSTOM, "12")))
+    }
+
+    private fun barcode(text: String): Barcode = (BarcodeNormalizer.fromManualEntry(text) as BarcodeParse.Valid).barcode
+
+    @Test
+    fun aBarcodeFindsTheOpenFoodFactsProductUnderEverySpelling() = runTest {
+        // Kölln Haferflocken is stored as 4000540000108; the same product as GTIN-14 or typed with spaces must find it.
+        for (spelling in listOf("4000540000108", "04000540000108", "40005 40000108", "4000540-000108")) {
+            val found = catalog.findByBarcode(barcode(spelling))
+            assertEquals(spelling, FoodKey(FoodSource.OFF, "4000540000108"), (found as BarcodeLookup.Found).food.key)
+        }
+    }
+
+    @Test
+    fun anEan8IsFoundWhenThe13DigitSpellingIsStoredAndTheOtherWayRound() = runTest {
+        // Lidl's Crownfield Haferflocken is stored as the 8-digit 20003166.
+        val found = catalog.findByBarcode(barcode("0000020003166"))
+        assertEquals(FoodKey(FoodSource.OFF, "20003166"), (found as BarcodeLookup.Found).food.key)
+        assertEquals(found.food.key, (catalog.findByBarcode(barcode("20003166")) as BarcodeLookup.Found).food.key)
+    }
+
+    @Test
+    fun anUnknownBarcodeIsNotFound() = runTest {
+        assertEquals(BarcodeLookup.NotFound(databaseUnavailable = false), catalog.findByBarcode(barcode("4999999999999")))
+    }
+
+    @Test
+    fun ownFoodsComeBeforeTheDatabaseWhenTheyShareACode() = runTest {
+        val (mine) = custom.preset(testFood(name = "Meine Haferflocken", barcode = "4000540000108"))
+        val found = catalog.findByBarcode(barcode("4000540000108")) as BarcodeLookup.Found
+        assertEquals(FoodKey(FoodSource.CUSTOM, mine.id.toString()), found.food.key)
+    }
+
+    @Test
+    fun anOwnFoodSavedWithAUpcAIsFoundWhenScannedAsEan13() = runTest {
+        val (mine) = custom.preset(testFood(name = "Amerikanischer Riegel", barcode = "036000291452"))
+        val found = catalog.findByBarcode(barcode("0036000291452")) as BarcodeLookup.Found
+        assertEquals(FoodKey(FoodSource.CUSTOM, mine.id.toString()), found.food.key)
     }
 
     @Test

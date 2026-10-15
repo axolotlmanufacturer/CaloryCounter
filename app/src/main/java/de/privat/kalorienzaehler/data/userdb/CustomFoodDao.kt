@@ -20,6 +20,10 @@ interface CustomFoodDao {
     @Query("SELECT * FROM custom_food WHERE barcode = :barcode ORDER BY id LIMIT 1")
     suspend fun findByBarcode(barcode: String): CustomFoodEntity?
 
+    /** The first food (oldest) with one of these spellings of a barcode (EAN-8, UPC-A, EAN-13, GTIN-14). */
+    @Query("SELECT * FROM custom_food WHERE barcode IN (:barcodes) ORDER BY id LIMIT 1")
+    suspend fun findByBarcodes(barcodes: List<String>): CustomFoodEntity?
+
     @Insert
     suspend fun insert(food: CustomFoodEntity): Long
 

@@ -13,6 +13,17 @@
         android:name="android.permission.ACCESS_NETWORK_STATE"
         tools:node="remove" />
 
+    <!-- The only permission (PROMPT.md 2.4): asked for in context when the scanner opens, with a rationale. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- The app is fully usable without a camera: the code can be typed. -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.autofocus"
+        android:required="false" />
+
     <application
         android:name=".KalorienzaehlerApp"
         android:allowBackup="true"

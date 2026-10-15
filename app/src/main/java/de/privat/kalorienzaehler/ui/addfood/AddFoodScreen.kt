@@ -63,6 +63,7 @@ fun AddFoodScreen(
     onBack: () -> Unit,
     onQuickEntry: () -> Unit,
     onCreateCustom: () -> Unit,
+    onScan: () -> Unit,
     onLogFood: (FoodHit) -> Unit,
     onEditFood: (FoodHit) -> Unit,
     modifier: Modifier = Modifier,
@@ -84,6 +85,7 @@ fun AddFoodScreen(
         onBack = onBack,
         onQuickEntry = onQuickEntry,
         onCreateCustom = onCreateCustom,
+        onScan = onScan,
         onLogFood = onLogFood,
         onEditFood = onEditFood,
         modifier = modifier,
@@ -101,6 +103,7 @@ fun AddFoodContent(
     onBack: () -> Unit,
     onQuickEntry: () -> Unit,
     onCreateCustom: () -> Unit,
+    onScan: () -> Unit,
     onLogFood: (FoodHit) -> Unit,
     onEditFood: (FoodHit) -> Unit,
     modifier: Modifier = Modifier,
@@ -121,25 +124,34 @@ fun AddFoodContent(
                 .fillMaxSize(),
         ) {
             item(key = "search") {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    label = { Text(stringResource(R.string.add_search_label)) },
-                    leadingIcon = { Icon(painterResource(R.drawable.ic_search_24), contentDescription = null) },
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = { onQueryChange("") }) {
-                                Icon(painterResource(R.drawable.ic_close_24), stringResource(R.string.add_search_clear))
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .focusRequester(searchFocus),
-                )
+                        .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = onQueryChange,
+                        label = { Text(stringResource(R.string.add_search_label)) },
+                        leadingIcon = { Icon(painterResource(R.drawable.ic_search_24), contentDescription = null) },
+                        trailingIcon = {
+                            if (query.isNotEmpty()) {
+                                IconButton(onClick = { onQueryChange("") }) {
+                                    Icon(painterResource(R.drawable.ic_close_24), stringResource(R.string.add_search_clear))
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(searchFocus),
+                    )
+                    IconButton(onClick = onScan) {
+                        Icon(painterResource(R.drawable.ic_barcode_scanner_24), stringResource(R.string.add_scan_barcode))
+                    }
+                }
                 // The search field takes the focus when the screen opens (PROMPT.md §7.3).
                 LaunchedEffect(Unit) {
                     if (!focusRequested) {

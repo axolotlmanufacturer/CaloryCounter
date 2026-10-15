@@ -52,7 +52,8 @@ class CustomFoodViewModel @AssistedInject constructor(
     var notFound by mutableStateOf(false)
         private set
 
-    var draft by mutableStateOf(CustomFoodDraft())
+    // A new food that comes from a scan that found nothing starts with the scanned code.
+    var draft by mutableStateOf(CustomFoodDraft(barcode = route.barcode.orEmpty()))
         private set
 
     val evaluation by derivedStateOf { draft.evaluate() }

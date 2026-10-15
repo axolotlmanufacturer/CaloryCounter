@@ -121,6 +121,13 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
 
+    // Barcode scanner (PROMPT.md 7.5): CameraX preview + analysis, zxing-cpp reads the frames. Both work offline.
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.zxing.cpp)
+
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
@@ -148,6 +155,7 @@ dependencies {
 
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.zxing.core)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
 }

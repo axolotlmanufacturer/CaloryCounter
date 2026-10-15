@@ -43,12 +43,17 @@ sealed interface PortionTarget {
     data class ExistingEntry(val entryId: Long) : PortionTarget
 }
 
+/** Full screen: scan (or type) a barcode to find a food for [meal] on the day [epochDay]. */
+@Serializable
+data class ScannerRoute(val epochDay: Long, val meal: Meal) : NavKey
+
 /**
  * Full screen: create ([customFoodId] = null) or edit a custom food. When created from the add flow,
- * [logTo] says where to continue: straight to the amount screen for the new food.
+ * [logTo] says where to continue: straight to the amount screen for the new food. A [barcode] (from a scan that
+ * found nothing) is filled in, so the next scan finds the new food.
  */
 @Serializable
-data class CustomFoodRoute(val customFoodId: Long? = null, val logTo: LogTarget? = null) : NavKey
+data class CustomFoodRoute(val customFoodId: Long? = null, val logTo: LogTarget? = null, val barcode: String? = null) : NavKey
 
 /** A day and meal that a food is being logged to. */
 @Serializable

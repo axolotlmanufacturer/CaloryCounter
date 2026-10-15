@@ -28,12 +28,14 @@ import de.privat.kalorienzaehler.ui.navigation.PortionRoute
 import de.privat.kalorienzaehler.ui.navigation.PortionTarget
 import de.privat.kalorienzaehler.ui.navigation.ProfileRoute
 import de.privat.kalorienzaehler.ui.navigation.QuickEntryRoute
+import de.privat.kalorienzaehler.ui.navigation.ScannerRoute
 import de.privat.kalorienzaehler.ui.navigation.StatsRoute
 import de.privat.kalorienzaehler.ui.navigation.TodayRoute
 import de.privat.kalorienzaehler.ui.navigation.TopLevelDestination
 import de.privat.kalorienzaehler.ui.navigation.WeightRoute
 import de.privat.kalorienzaehler.ui.navigation.Navigator
 import de.privat.kalorienzaehler.ui.navigation.rememberNavigationState
+import de.privat.kalorienzaehler.ui.scanner.ScannerScreen
 import de.privat.kalorienzaehler.ui.settings.ProfileScreen
 import de.privat.kalorienzaehler.ui.stats.StatsScreen
 import de.privat.kalorienzaehler.ui.today.TodayScreen
@@ -71,12 +73,28 @@ fun KalorienzaehlerRoot() {
                 onBack = { navigator.goBack() },
                 onQuickEntry = { navigator.navigate(QuickEntryRoute(route.epochDay, route.meal)) },
                 onCreateCustom = { navigator.navigate(CustomFoodRoute(logTo = LogTarget(route.epochDay, route.meal))) },
+                onScan = { navigator.navigate(ScannerRoute(route.epochDay, route.meal)) },
                 onLogFood = { food ->
                     navigator.navigate(
                         PortionRoute(PortionTarget.NewFromFood(food.key.source, food.key.ref, route.epochDay, route.meal)),
                     )
                 },
                 onEditFood = { food -> food.key.ref.toLongOrNull()?.let { navigator.navigate(CustomFoodRoute(customFoodId = it)) } },
+            )
+        }
+        entry<ScannerRoute> { route ->
+            ScannerScreen(
+                route = route,
+                onBack = { navigator.goBack() },
+                // The scanner is replaced, so "back" from the amount or the form returns to the add screen.
+                onFoodFound = { key ->
+                    navigator.replaceCurrent(
+                        PortionRoute(PortionTarget.NewFromFood(key.source, key.ref, route.epochDay, route.meal)),
+                    )
+                },
+                onCreateCustom = { code ->
+                    navigator.replaceCurrent(CustomFoodRoute(logTo = LogTarget(route.epochDay, route.meal), barcode = code))
+                },
             )
         }
         entry<QuickEntryRoute> { route ->

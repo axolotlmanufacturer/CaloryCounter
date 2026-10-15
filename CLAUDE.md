@@ -246,6 +246,29 @@ $ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions app/build/outputs/apk/rel
 - **Known limits of Phase 4:** the "ca." flag of an estimated portion is not stored in the diary entry (only the unit label is),
   it is looked up in the food when an entry is edited, so it disappears if the food or the portion label is gone. A food that
   was deleted leaves its favorite row behind (invisible, the id is never reused). Both would need a `user.db` migration.
+- **Barcode scanner (Phase 5):**
+  - `:domain/barcode/BarcodeNormalizer`: GTIN check digit, UPC-E → UPC-A expansion, and `lookupCodes` = every spelling of a
+    number as EAN-8 / UPC-A / EAN-13 / GTIN-14 (zero padded), because Open Food Facts and own foods store the same product
+    either way. A scanned UPC-E is stored (custom food) as its UPC-A. Manual entry ignores spaces and hyphens; 8 typed digits
+    are an EAN-8 if the check digit fits (and the UPC-E reading is tried as well), else a UPC-E.
+  - **In-store codes:** EAN-13 starting 20–29 (and UPC-A starting 2) get the hint only when nothing was found (own foods with
+    such a code are found normally). EAN-8 starting 20–29 are real products (Lidl) and get no hint. PROMPT.md 7.5 says
+    "cannot be in the database"; the hint is shown after a miss instead of before the lookup.
+  - **Lookup order:** `FoodCatalog.findByBarcode` → own foods (`CustomFoodDao.findByBarcodes`) → `foods.db`
+    (`FoodRepository.findByBarcodes`, waits for the DB). `BarcodeLookup.NotFound.databaseUnavailable` tells when the DB failed.
+  - **Camera layer:** `ui/scanner/BarcodeCamera` is an interface (CameraX preview + `ImageAnalysis` + zxing-cpp
+    `BarcodeReader`, formats EAN-13/EAN-8/UPC-A/UPC-E) provided by Hilt (`CameraModule`) and handed to the UI through
+    `LocalBarcodeCamera` in `MainActivity`; tests replace it with `FakeBarcodeCamera` (`TestCameraModule`). Only
+    `CameraXBarcodeCamera.kt` touches CameraX/zxing, so JVM tests never load the native library. The whole frame is read;
+    the frame overlay is only a visual aid.
+  - **Permission:** `CAMERA` is the only permission (`uses-feature camera/autofocus required=false`). The scanner shows a
+    rationale card first ("Kamera erlauben"), after a final refusal a card with "Einstellungen öffnen", and without a
+    camera a message; in all cases the typed code works. `CameraAccess` has four states.
+  - **Navigation:** `ScannerRoute(epochDay, meal)` is reached from the barcode button next to the search field. A hit
+    `replaceCurrent`s the scanner by the amount screen, "Eigenes Lebensmittel anlegen" by `CustomFoodRoute(barcode = …)`, so
+    back always returns to the add screen. `ScannerViewModel` ignores further frames while a lookup runs.
+  - **Not testable in the cloud container:** the real camera path (CameraX binding, torch, analysis, haptics) has no test
+    on the JVM. `ZxingCppReadsBarcodesTest` (androidTest) checks on a device that the native library reads the four formats.
 - **Day sums** are computed in Kotlin (`DiaryMath`) from the day's entries; SQL range sums come with the statistics (Phase 6).
 - The keystore can't live in the ephemeral cloud container. How to handle it is decided in Phase 8.
 
@@ -324,7 +347,6 @@ present after any `./gradlew --version`):
 - Phase 7: form drafts (custom food, Schnelleintrag, amount, onboarding, Profil) live in ViewModel state and are lost when
   Android kills the process (the route is restored, the typed text is not): back them with `SavedStateHandle`/savers.
 
-- Phase 5: barcode check-digit validation (`BarcodeNormalizer`), `CustomFoodRoute` gets a barcode prefill, scanner button on the add screen.
 - Phase 6: SQL range sums per day for the statistics (`DiaryDao`), tests for them.
 - Phase 7: `TodayViewModel.today` is read when the screen is created: refresh at midnight; "Alle Daten loeschen" must also
   call `diary.deleteEverything()`, `customFoods.deleteEverything()` and `favorites.deleteEverything()` (all exist already).
@@ -334,4 +356,5 @@ present after any `./gradlew --version`):
   currently covers the content screens, not the root navigation bar: extend it.
 - Phase 7: "Alle Daten löschen" and "Über die App" are not built yet (`FoodRepository.meta()` already returns the
   sources, dates and counts for the About screen; data deletion is Phase 7).
-- Phase 5: `FoodRepository.findByBarcodes(listOf(12-digit, 13-digit))` is ready for the scanner; it needs the check-digit logic.
+- Phase 7: the camera path needs a check on a real phone (focus, speed, torch, vibration); the scanner reads the whole frame, a
+  tap-to-focus or a reading area could be added if mis-scans of neighbouring packs happen.

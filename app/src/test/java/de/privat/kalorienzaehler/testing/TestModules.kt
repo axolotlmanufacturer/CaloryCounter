@@ -13,8 +13,10 @@ import de.privat.kalorienzaehler.data.repository.FoodCatalog
 import de.privat.kalorienzaehler.data.repository.FoodRepository
 import de.privat.kalorienzaehler.data.repository.ProfileRepository
 import de.privat.kalorienzaehler.data.repository.WeightRepository
+import de.privat.kalorienzaehler.di.CameraModule
 import de.privat.kalorienzaehler.di.ClockModule
 import de.privat.kalorienzaehler.di.RepositoryModule
+import de.privat.kalorienzaehler.ui.scanner.BarcodeCamera
 import java.time.Clock
 
 /** Replaces the DataStore/Room repositories with in-memory fakes in Hilt tests. */
@@ -42,4 +44,11 @@ abstract class TestRepositoryModule {
 @TestInstallIn(components = [SingletonComponent::class], replaces = [ClockModule::class])
 object TestClockModule {
     @Provides fun provideClock(): Clock = TEST_CLOCK
+}
+
+/** A stand-in for the camera in Hilt tests (see [FakeBarcodeCamera]). */
+@Module
+@TestInstallIn(components = [SingletonComponent::class], replaces = [CameraModule::class])
+object TestCameraModule {
+    @Provides fun provideBarcodeCamera(): BarcodeCamera = FakeBarcodeCamera
 }

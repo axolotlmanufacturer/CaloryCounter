@@ -14,6 +14,9 @@ composeBom = "2026.09.00"
 room = "2.8.5"
 datastore = "1.2.1"
 hiltAndroidx = "1.4.0"
+camerax = "1.6.2"
+zxingCpp = "3.1.1"
+zxingCore = "3.5.4"
 
 # Kotlin libraries
 kotlinxSerialization = "1.11.0"
@@ -48,6 +51,13 @@ hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hil
 
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "camerax" }
+androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
+androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
+zxing-cpp = { module = "io.github.zxing-cpp:android", version.ref = "zxingCpp" }
+# Test only: draws barcodes for the instrumented reader test (it is not part of the app).
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxingCore" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-hilt-lifecycle-viewmodel-compose = { module = "androidx.hilt:hilt-lifecycle-viewmodel-compose", version.ref = "hiltAndroidx" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }

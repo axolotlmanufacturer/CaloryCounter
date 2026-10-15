@@ -312,4 +312,31 @@
     <string name="nutrition_fiber">Ballaststoffe</string>
     <string name="nutrition_protein">Eiweiß</string>
     <string name="nutrition_salt">Salz</string>
+
+    <!-- Barcode-Scanner (PROMPT.md 7.5) -->
+    <string name="add_scan_barcode">Strichcode scannen</string>
+    <string name="scanner_title">Strichcode scannen</string>
+    <string name="scanner_camera_description">Kameravorschau zum Scannen eines Strichcodes. Du kannst den Code auch unten eintippen.</string>
+    <string name="scanner_aim_hint">Halte den Strichcode in den Rahmen.</string>
+    <string name="scanner_torch_on">Taschenlampe einschalten</string>
+    <string name="scanner_torch_off">Taschenlampe ausschalten</string>
+    <string name="scanner_permission_title">Kamera erlauben?</string>
+    <string name="scanner_permission_rationale">Mit der Kamera liest die App den Strichcode auf Verpackungen. Das Bild wird nur auf deinem Gerät ausgewertet, nicht gespeichert und nirgendwohin gesendet. Ohne Kamera kannst du den Code von Hand eintippen.</string>
+    <string name="scanner_permission_allow">Kamera erlauben</string>
+    <string name="scanner_permission_denied">Die Kamera ist für diese App ausgeschaltet. Du kannst sie in den Einstellungen erlauben oder den Code von Hand eintippen.</string>
+    <string name="scanner_permission_settings">Einstellungen öffnen</string>
+    <string name="scanner_no_camera">Dieses Gerät hat keine Kamera. Du kannst den Code von Hand eintippen.</string>
+    <string name="scanner_manual_title">Code eintippen</string>
+    <string name="scanner_manual_label">Strichcode (Ziffern)</string>
+    <string name="scanner_manual_search">Suchen</string>
+    <string name="scanner_error_digits">Ein Strichcode besteht nur aus Ziffern.</string>
+    <string name="scanner_error_length">Strichcodes haben 8, 12, 13 oder 14 Ziffern.</string>
+    <string name="scanner_error_check_digit">Die Prüfziffer passt nicht. Vielleicht hat sich ein Zahlendreher eingeschlichen?</string>
+    <string name="scanner_looking">Suche nach %1$s …</string>
+    <string name="scanner_not_found_title">Produkt nicht gefunden</string>
+    <string name="scanner_not_found_body">Zum Code %1$s gibt es keinen Eintrag. Du kannst das Produkt selbst anlegen, dann wird es beim nächsten Scan gefunden.</string>
+    <string name="scanner_in_store_hint">Codes, die mit 20 bis 29 beginnen, vergeben Geschäfte selbst, zum Beispiel für abgewogene Ware. Sie stehen in keiner Produktdatenbank.</string>
+    <string name="scanner_database_unavailable">Die Lebensmitteldatenbank konnte nicht geladen werden, es wurden nur deine eigenen Lebensmittel durchsucht.</string>
+    <string name="scanner_create_custom">Eigenes Lebensmittel anlegen</string>
+    <string name="scanner_scan_again">Nochmal scannen</string>
 </resources>

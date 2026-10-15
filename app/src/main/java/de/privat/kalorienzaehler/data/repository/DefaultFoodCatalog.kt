@@ -1,6 +1,7 @@
 package de.privat.kalorienzaehler.data.repository
 
 import de.privat.kalorienzaehler.data.fooddb.FoodDbStatus
+import de.privat.kalorienzaehler.domain.barcode.Barcode
 import de.privat.kalorienzaehler.domain.diary.CustomFood
 import de.privat.kalorienzaehler.domain.diary.FoodHit
 import de.privat.kalorienzaehler.domain.diary.FoodKey
@@ -71,6 +72,12 @@ class DefaultFoodCatalog @Inject constructor(
     }
 
     override suspend fun search(query: String, today: LocalDate): List<FoodHit> = observeSearch(query, today).first()
+
+    override suspend fun findByBarcode(barcode: Barcode): BarcodeLookup {
+        custom.findByBarcodes(barcode.lookupCodes)?.let { return BarcodeLookup.Found(it.toHit()) }
+        foods.findByBarcodes(barcode.lookupCodes)?.let { return BarcodeLookup.Found(it.toHit()) }
+        return BarcodeLookup.NotFound(databaseUnavailable = foods.status.value == FoodDbStatus.Failed)
+    }
 
     override suspend fun load(key: FoodKey): LoggableFood? = when (key.source) {
         FoodSource.CUSTOM -> key.ref.toLongOrNull()?.let { custom.get(it) }?.toLoggable()

@@ -208,6 +208,9 @@ class FakeCustomFoodRepository @Inject constructor() : CustomFoodRepository {
 
     override suspend fun get(id: Long): CustomFood? = foods.value[id]
 
+    override suspend fun findByBarcodes(barcodes: List<String>): CustomFood? =
+        foods.value.values.sortedBy { it.id }.firstOrNull { it.barcode in barcodes }
+
     override suspend fun save(food: CustomFood): Long {
         if (failWrites) throw IOException("disk full")
         val id = if (food.id == 0L) nextId++ else food.id

@@ -11,6 +11,9 @@ interface CustomFoodRepository {
 
     suspend fun get(id: Long): CustomFood?
 
+    /** The first own food whose barcode is one of these spellings of a code, or `null`. */
+    suspend fun findByBarcodes(barcodes: List<String>): CustomFood?
+
     /** Inserts the food (id 0) or updates it, and returns its id. */
     suspend fun save(food: CustomFood): Long
 

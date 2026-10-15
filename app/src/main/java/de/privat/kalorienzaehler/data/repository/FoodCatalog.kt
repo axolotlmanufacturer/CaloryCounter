@@ -1,6 +1,7 @@
 package de.privat.kalorienzaehler.data.repository
 
 import de.privat.kalorienzaehler.data.fooddb.FoodDbStatus
+import de.privat.kalorienzaehler.domain.barcode.Barcode
 import de.privat.kalorienzaehler.domain.diary.FoodHit
 import de.privat.kalorienzaehler.domain.diary.FoodKey
 import de.privat.kalorienzaehler.domain.diary.LoggableFood
@@ -39,6 +40,20 @@ interface FoodCatalog {
     /** The first result of [observeSearch]. */
     suspend fun search(query: String, today: LocalDate): List<FoodHit>
 
+    /**
+     * Looks a scanned or typed barcode up: the user's own foods first, then the food database (PROMPT.md 7.5). Waits
+     * for the database if it is still being prepared.
+     */
+    suspend fun findByBarcode(barcode: Barcode): BarcodeLookup
+
     /** The food with everything the amount screen needs, or `null` if it no longer exists. */
     suspend fun load(key: FoodKey): LoggableFood?
+}
+
+/** What a barcode found. */
+sealed interface BarcodeLookup {
+    data class Found(val food: FoodHit) : BarcodeLookup
+
+    /** Nothing has this code. [databaseUnavailable]: the food database could not be opened, so only own foods were searched. */
+    data class NotFound(val databaseUnavailable: Boolean) : BarcodeLookup
 }

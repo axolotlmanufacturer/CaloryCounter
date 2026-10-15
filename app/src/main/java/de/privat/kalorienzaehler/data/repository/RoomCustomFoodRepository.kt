@@ -21,6 +21,9 @@ class RoomCustomFoodRepository @Inject constructor(
 
     override suspend fun get(id: Long): CustomFood? = dao.get(id)?.toDomain()
 
+    override suspend fun findByBarcodes(barcodes: List<String>): CustomFood? =
+        if (barcodes.isEmpty()) null else dao.findByBarcodes(barcodes)?.toDomain()
+
     override suspend fun save(food: CustomFood): Long =
         if (food.id == 0L) {
             dao.insert(food.toEntity())

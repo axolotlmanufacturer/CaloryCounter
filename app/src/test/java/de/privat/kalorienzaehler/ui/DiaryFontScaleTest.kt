@@ -165,6 +165,7 @@ class DiaryFontScaleTest {
                     onBack = {},
                     onQuickEntry = {},
                     onCreateCustom = {},
+                    onScan = {},
                     onLogFood = {},
                     onEditFood = {},
                 )
